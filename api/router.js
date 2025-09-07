@@ -49,6 +49,25 @@ const catalogData = [
     stream: "https://pulse.topstrime.online/movie/1374534/k5sr6f/master.m3u8"
   },
 
+    {
+    id: "tt10456740",
+    type: "movie",
+    name: "Balle Perdue",
+    stream: "https://pulse.topstrime.online/movie/706503/9b4mru/master.m3u8"
+  },
+    {
+    id: "tt14465706",
+    type: "movie",
+    name: "Balle Perdue 2",
+    stream: "https://pulse.topstrime.online/movie/948276/fngfyb/master.m3u8"
+  },
+    {
+    id: "tt29768333",
+    type: "movie",
+    name: "Balle Perdue 3",
+    stream: "https://pulse.topstrime.online/movie/1144430/pygy75/master.m3u8"
+  },
+
 
   
    {
