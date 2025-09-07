@@ -41,6 +41,16 @@ const catalogData = [
     name: "Les Bodin's en Thaïlande",
     stream: "https://pulse.topstrime.online/movie/874294/5av1y5/master.m3u8"
   },
+
+   {
+    id: "tt27675583",
+    type: "movie",
+    name: "Almost Cops",
+    stream: "https://pulse.topstrime.online/movie/1374534/k5sr6f/master.m3u8"
+  },
+
+
+  
    {
     id: "tt30973842",
     type: "movie",
