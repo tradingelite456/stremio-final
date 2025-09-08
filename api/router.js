@@ -589,6 +589,59 @@ const catalogData = [
         stream: "https://pulse.topstrime.online/tv/217553/93of7h/S1/E8/master.m3u8"
       }
     ]
+  },
+
+   {
+    id: "tt36056620",
+    type: "series",
+    name: "S Line",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une jeune femme dotée de la capacité de voir de mystérieuses connexions rouges entre les amoureux découvre que son don secret n'est plus unique lorsque des lunettes spéciales conférant des pouvoirs similaires apparaissent sur le marché noir.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/232402/lvoq7e/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/232402/5s1til/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/232402/w2pzmc/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/232402/8v58mm/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/232402/b9ttm1/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://luminous-lokum-4d3c4a.netlify.app/master.m3u8"
+      }
+    ]
   }
   
 ];
