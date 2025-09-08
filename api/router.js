@@ -395,6 +395,38 @@ const catalogData = [
         stream: "https://pulse.topstrime.online/tv/248937/ccsj30/S1/E5/master.m3u8"
       }
     ]
+  },
+
+     {
+    id: "tt32146392",
+    type: "series",
+    name: "Deux Tombes",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://neon-monstera-87a431.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://willowy-cactus-8c7dea.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://magenta-rabanadas-6fa517.netlify.app/master.m3u8"
+      }
+    ]
   }
   
 ];
