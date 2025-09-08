@@ -68,7 +68,12 @@ const catalogData = [
     stream: "https://pulse.topstrime.online/movie/1144430/pygy75/master.m3u8"
   },
 
-
+  {
+    id: "tt34190272",
+    type: "movie",
+    name: "Enemis",
+    stream: "https://pulse.topstrime.online/movie/1285406/umd7qg/master.m3u8"
+  },
   
    {
     id: "tt30973842",
