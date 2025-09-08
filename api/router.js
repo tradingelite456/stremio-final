@@ -351,33 +351,51 @@ const catalogData = [
     ]
   },
 
-
-    {
-    id: "tt5675334",
+     {
+    id: "tt31806048",
     type: "series",
-    name: "La Villa des coeurs brisés",
+    name: "Hostage",
     poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Ils sont plébiscités par le public pour avoir vécu des histoires d'amour qui se sont mal terminées... Nous allons les aider à reprendre confiance en eux et leur donner toutes les clés pour séduire, afin qu'ils puissent, enfin, trouver le GRAND AMOUR !",
+    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
     genres: ["Comedy", "Fantasy"],
     videos: [
       {
-        id: "s10e22",
-        title: "Épisode 22",
-        season: 10,
-        episode: 22,
-        stream: "https://dainty-bienenstitch-92bfd0.netlify.app/Video.m3u8"
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/248937/cqleut/S1/E1/master.m3u8"
       },
       {
-        id: "s10e23",
-        title: "Épisode 23",
-        season: 10,
-        episode: 23,
-        stream: "https://super-creponne-012bcc.netlify.app/S10E23.m3u8"
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/248937/v94n00/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/248937/70wgya/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/248937/he3w7h/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/248937/ccsj30/S1/E5/master.m3u8"
       }
-     
     ]
   }
-     
   
 ];
 
