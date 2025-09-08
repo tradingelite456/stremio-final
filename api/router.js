@@ -74,6 +74,13 @@ const catalogData = [
     name: "Enemis",
     stream: "https://pulse.topstrime.online/movie/1285406/umd7qg/master.m3u8"
   },
+
+   {
+    id: "tt26452781",
+    type: "movie",
+    name: "Marked Men",
+    stream: "https://heartfelt-tulumba-056f93.netlify.app/master.m3u8"
+  },
   
    {
     id: "tt30973842",
