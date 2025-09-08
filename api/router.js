@@ -102,6 +102,27 @@ const catalogData = [
     name: "Couic !",
     stream: "https://shiny-zabaione-b12d33.netlify.app/master.m3u8"
   },
+
+  {
+    id: "tt31184028",
+    type: "movie",
+    name: "Together",
+    stream: "https://pulse.topstrime.online/movie/1242011/k2jkz3/master.m3u8"
+  },
+
+  {
+    id: "tt14760886",
+    type: "movie",
+    name: "Free fall",
+    stream: "https://pulse.topstrime.online/movie/650033/x3aj83/master.m3u8"
+  },
+
+   {
+    id: "tt4045450",
+    type: "movie",
+    name: "Souviens-toi... l'été dernier",
+    stream: "https://pulse.topstrime.online/movie/1083433/qhq61h/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -499,6 +520,73 @@ const catalogData = [
         season: 1,
         episode: 6,
         stream: "https://pulse.topstrime.online/tv/241501/7kvh77/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt28106730",
+    type: "series",
+    name: "The Trauma Code: Appel à l'Héroïsme ?",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une équipe d'élite de spécialistes en traumatologie dans un hôpital universitaire dirigée par le génie médecin Baek Kang-hyeok.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/217553/oujh42/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/217553/fk4gtu/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/217553/xkh9g2/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/217553/rfym4c/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/217553/7b62w6/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/217553/5sqf9c/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/217553/igagnq/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/217553/93of7h/S1/E8/master.m3u8"
       }
     ]
   }
