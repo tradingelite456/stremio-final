@@ -81,6 +81,27 @@ const catalogData = [
     name: "Marked Men",
     stream: "https://heartfelt-tulumba-056f93.netlify.app/master.m3u8"
   },
+
+   {
+    id: "tt23060698",
+    type: "movie",
+    name: "La nuit des clowns",
+    stream: "https://pulse.topstrime.online/movie/713364/yl5689/master.m3u8"
+  },
+
+  {
+    id: "tt12001534",
+    type: "movie",
+    name: "Le Murder Club du jeudi",
+    stream: "https://pulse.topstrime.online/movie/744653/m96tzk/master.m3u8"
+  },
+
+  {
+    id: "tt8785038",
+    type: "movie",
+    name: "Couic !",
+    stream: "https://shiny-zabaione-b12d33.netlify.app/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -425,6 +446,59 @@ const catalogData = [
         season: 1,
         episode: 3,
         stream: "https://magenta-rabanadas-6fa517.netlify.app/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt30428143",
+    type: "series",
+    name: "Apple Cider Vinegar",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "La vie de Belle Gibson, gourou du bien-être, très suivie sur les réseaux sociaux, où elle prétendait souffrir d'un cancer tout en contrôlant sa maladie grâce à des thérapies auto-administrées. Elle a avoué que tout cela était faux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/241501/e0zgqi/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://glistening-sherbet-f1134c.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/241501/aujni2/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/241501/990biw/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/241501/5robox/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/241501/7kvh77/S1/E6/master.m3u8"
       }
     ]
   }
