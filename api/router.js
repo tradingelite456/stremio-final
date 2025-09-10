@@ -130,6 +130,47 @@ const catalogData = [
     name: "On ira",
     stream: "https://pulse.topstrime.online/movie/1003504/i09w9p/master.m3u8"
   },
+
+    {
+    id: "tt15004066",
+    type: "movie",
+    name: "Atoman",
+    stream: "https://pulse.topstrime.online/movie/869048/inhwy5/master.m3u8"
+  },
+
+  {
+    id: "tt4900148",
+    type: "movie",
+    name: "Elio",
+    stream: "https://pulse.topstrime.online/movie/1022787/su92dr/master.m3u8"
+  },
+ {
+    id: "tt30017619",
+    type: "movie",
+    name: "Les Bad Guys 2",
+    stream: "https://pulse.topstrime.online/movie/1175942/9504aw/master.m3u8"
+  },
+
+  {
+    id: "tt35705226",
+    type: "movie",
+    name: "Moon Le Panda",
+    stream: "https://pulse.topstrime.online/movie/1178532/j7uu5w/master.m3u8"
+  },
+
+  {
+    id: "tt31176520",
+    type: "movie",
+    name: "Eddington",
+    stream: "https://pulse.topstrime.online/movie/648878/p5l1ku/master.m3u8"
+  },
+
+  {
+    id: "tt21317634",
+    type: "movie",
+    name: "Bride Hard",
+    stream: "https://pulse.topstrime.online/movie/1124619/v5hfbp/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -527,6 +568,112 @@ const catalogData = [
         season: 1,
         episode: 6,
         stream: "https://pulse.topstrime.online/tv/241501/7kvh77/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt18332852",
+    type: "series",
+    name: "Outlander: Blood of My Blood",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Préquel de la série Outlander se concentre sur la vie et les fréquentations des parents de Jamie Fraser : Brian Fraser et Ellen Mackenzie.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/207484/jsvq66/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/207484/6q5hot/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/207484/a3ji61/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/207484/f42ia9/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/207484/spfqdf/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/207484/va5dxy/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt36125791",
+    type: "series",
+    name: "Soleil noir",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une femme fuyant son passé est accusée de meurtre après le décès de son employeur dans une ferme de fleurs - pour apprendre ensuite qu'il était son père biologique.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/272466/4ys8mc/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/272466/akri3b/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/272466/ohs6y0/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/272466/r373tu/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/272466/nkku1p/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/272466/htv0wl/S1/E6/master.m3u8"
       }
     ]
   },
