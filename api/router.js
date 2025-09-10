@@ -171,6 +171,27 @@ const catalogData = [
     name: "Bride Hard",
     stream: "https://pulse.topstrime.online/movie/1124619/v5hfbp/master.m3u8"
   },
+
+  {
+    id: "tt1674782",
+    type: "movie",
+    name: "Karate Kid: Legends",
+    stream: "https://pulse.topstrime.online/movie/1011477/pj6wor/master.m3u8"
+  },
+
+  {
+    id: "tt32535595",
+    type: "movie",
+    name: "Doux Jésus",
+    stream: "https://pulse.topstrime.online/movie/1284514/2wos5f/master.m3u8"
+  },
+
+  {
+    id: "tt5950044",
+    type: "movie",
+    name: "Superman",
+    stream: "https://pulse.topstrime.online/movie/1061474/9pbrb4/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -487,6 +508,52 @@ const catalogData = [
     ]
   },
 
+   {
+    id: "tt31019484",
+    type: "series",
+    name: "Tu me manques",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Le monde de l'inspecteur Kat Donovan s'écroule lorsqu'elle retrouve son ancien fiancé sur une application de rencontres. Cela conduit Kat à rouvrir le mystère non résolu du meurtre de son père.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/244243/gn4nlr/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/244243/frya3f/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/244243/dmkuly/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/244243/yfomp3/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/244243/op68yg/S1/E5/master.m3u8"
+      }
+    ]
+  },
+
      {
     id: "tt32146392",
     type: "series",
@@ -741,6 +808,73 @@ const catalogData = [
         season: 1,
         episode: 8,
         stream: "https://pulse.topstrime.online/tv/217553/93of7h/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt36955264",
+    type: "series",
+    name: "Young Millionaires",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Quatre amis de 17 ans gagnent à la loterie à Marseille, mais sont trop jeunes pour le réclamer. Leur jackpot de 17 millions entraîne des complications de plus en plus nombreuses : être riche pour des adolescents n'est pas aussi simple qu'il y paraît.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/272467/fnl4gu/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/272467/16odew/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/272467/27496n/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/272467/vd81m5/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/272467/1fqfe6/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/272467/5677ow/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/272467/gcbmbg/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/272467/u4fcbu/S1/E8/master.m3u8"
       }
     ]
   },
