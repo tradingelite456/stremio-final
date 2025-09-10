@@ -192,6 +192,28 @@ const catalogData = [
     name: "Superman",
     stream: "https://pulse.topstrime.online/movie/1061474/9pbrb4/master.m3u8"
   },
+
+  
+  {
+    id: "tt31194612",
+    type: "movie",
+    name: "Highest 2 Lowest",
+    stream: "https://rainbow-dragon-dc7db7.netlify.app/master.m3u8"
+  },
+
+{
+    id: "tt12908150",
+    type: "movie",
+    name: "Life of Chuck",
+    stream: "https://pulse.topstrime.online/movie/842924/d3b1j8/master.m3u8"
+  },
+
+  {
+    id: "tt31241595",
+    type: "movie",
+    name: "Zombies 4: Dawn of the Vampires",
+    stream: "https://pulse.topstrime.online/movie/1243341/ybuk9j/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -462,6 +484,102 @@ const catalogData = [
     ]
   },
 
+
+   {
+    id: "tt33364760",
+    type: "series",
+    name: "Eondeokeobeo Haiseukul",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "L'agent vedette du NIS Jung Hae-seong est rétrogradé après l'échec d'une mission. Il se rend infiltré dans un lycée pour retrouver l'or disparu du roi Gojong. Il y rencontre son professeur Oh Soo-ah, qui le considère comme son premier amour perdu, réveillant ainsi un chagrin d'amour.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/248244/omdsfi/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/248244/bqcctu/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/248244/6olr2y/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/248244/omhehh/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/248244/u6x9zn/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/248244/8c1nao/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/248244/fvbotx/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/248244/kg1kcb/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/248244/xfhibm/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/248244/284yo0/S1/E10/master.m3u8"
+      },
+       {
+        id: "s1e11",
+        title: "Épisode 11",
+        season: 1,
+        episode: 11,
+        stream: "https://pulse.topstrime.online/tv/248244/uca0uy/S1/E11/master.m3u8"
+      },
+      {
+        id: "s1e12",
+        title: "Épisode 12",
+        season: 1,
+        episode: 12,
+        stream: "https://pulse.topstrime.online/tv/248244/to8bfn/S1/E12/master.m3u8"
+      }
+    ]
+  },
+
      {
     id: "tt31806048",
     type: "series",
@@ -635,6 +753,59 @@ const catalogData = [
         season: 1,
         episode: 6,
         stream: "https://pulse.topstrime.online/tv/241501/7kvh77/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt13623632",
+    type: "series",
+    name: "Alien: Earth",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "La vie de Belle Gibson, gourou du bien-être, très suivie sur les réseaux sociaux, où elle prétendait souffrir d'un cancer tout en contrôlant sa maladie grâce à des thérapies auto-administrées. Elle a avoué que tout cela était faux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/157239/vs5zrp/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/157239/1itbb5/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/157239/jbjrug/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/157239/raijmc/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/157239/8o19wi/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/157239/nzpdv9/S1/E6/master.m3u8"
       }
     ]
   },
