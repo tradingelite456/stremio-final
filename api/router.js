@@ -242,6 +242,14 @@ const catalogData = [
     name: "Évanouis",
     stream: "https://pulse.topstrime.online/movie/1078605/uonl8b/master.m3u8"
   },
+
+{
+    id: "tt33398195",
+    type: "movie",
+    name: "Les ailes collées",
+    stream: "https://pulse.topstrime.online/movie/1313219/thaany/master.m3u8"
+  },
+  
   
    {
     id: "tt30973842",
@@ -834,6 +842,52 @@ const catalogData = [
         season: 1,
         episode: 5,
         stream: "https://pulse.topstrime.online/tv/248937/ccsj30/S1/E5/master.m3u8"
+      }
+    ]
+  },
+
+    {
+    id: "tt36614693",
+    type: "series",
+    name: "WWE: Unreal",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/289485/dubi0d/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/289485/ktp13k/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/289485/j48v23/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/289485/9da1js/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/289485/squnfw/S1/E5/master.m3u8"
       }
     ]
   },
