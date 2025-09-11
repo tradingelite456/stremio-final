@@ -228,6 +228,20 @@ const catalogData = [
     name: "Sorry, Baby",
     stream: "https://pulse.topstrime.online/movie/1205515/eef5bc/master.m3u8"
   },
+
+  {
+    id: "tt33610694",
+    type: "movie",
+    name: "Le Routard",
+    stream: "https://pulse.topstrime.online/movie/1191666/b17ttv/master.m3u8"
+  },
+
+  {
+    id: "tt26581740",
+    type: "movie",
+    name: "Évanouis",
+    stream: "https://pulse.topstrime.online/movie/1078605/uonl8b/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -590,6 +604,88 @@ const catalogData = [
         season: 1,
         episode: 12,
         stream: "https://pulse.topstrime.online/tv/248244/to8bfn/S1/E12/master.m3u8"
+      }
+    ]
+  },
+
+  
+   {
+    id: "tt23649128",
+    type: "series",
+    name: "The Studio",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Suit un studio de cinéma hollywoodien qui cherche à survivre dans un monde où il est de plus en plus difficile pour l'art et les affaires de vivre ensemble.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/247767/aw1fd2/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/247767/o33azw/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/247767/r6b7f9/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/247767/noyesa/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/247767/1knp45/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/247767/bu8if4/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/247767/4jacco/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/247767/j0nslu/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/247767/7pic0i/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/247767/g4rycd/S1/E10/master.m3u8"
       }
     ]
   },
