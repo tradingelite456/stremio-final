@@ -307,6 +307,13 @@ const catalogData = [
     name: "28 ans plus tard",
     stream: "https://pulse.topstrime.online/movie/1100988/wu59z4/master.m3u8"
   },
+
+  {
+    id: "tt31179712",
+    type: "movie",
+    name: "Osiris",
+    stream: "https://pulse.topstrime.online/movie/1241470/auauhy/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -1299,6 +1306,112 @@ const catalogData = [
   },
 
    {
+    id: "tt30750108",
+    type: "series",
+    name: "Le Dôme de verre",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une criminologue et son ancien partenaire chef de la police enquêtent sur la disparition d'une jeune fille dans la petite ville suédoise où elle a été retenue captive.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/275388/fse1tv/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/275388/bs5i1u/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/275388/9ynrob/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/275388/7mm24u/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/275388/3tlz5f/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/275388/9yujz9/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt33246591",
+    type: "series",
+    name: "The Assassin",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une assassin à la retraite retrouve son fils dont elle s'est séparée, mais son dangereux passé les rattrape, les obligeant à fuir ensemble et à découvrir une sombre conspiration qui menace leur relation.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/262352/6va1zl/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/262352/d2buie/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/262352/xd5591/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/262352/6zcsj9/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/262352/nxzvsl/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/262352/n6xo0b/S1/E6/master.m3u8"
+      }
+    ]
+  },
+
+   {
     id: "tt13623632",
     type: "series",
     name: "Alien: Earth",
@@ -1520,6 +1633,73 @@ const catalogData = [
         season: 1,
         episode: 8,
         stream: "https://pulse.topstrime.online/tv/217553/93of7h/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt36517681",
+    type: "series",
+    name: "Le Catalogue d'Amina",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une équipe d'élite de spécialistes en traumatologie dans un hôpital universitaire dirigée par le génie médecin Baek Kang-hyeok.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/252125/l2djys/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/252125/k4oe8q/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/252125/kczu27/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/252125/yd6kf1/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/252125/3qpdl0/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/252125/ixfa00/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/252125/q5w5a6/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/252125/umc2fg/S1/E8/master.m3u8"
       }
     ]
   },
