@@ -284,6 +284,29 @@ const catalogData = [
     name: "Materialists",
     stream: "https://pulse.topstrime.online/movie/1136867/wsexqv/master.m3u8"
   },
+
+    {
+    id: "tt11655566",
+    type: "movie",
+    name: "Lilo et Stitch",
+    stream: "https://pulse.topstrime.online/movie/552524/usoqx3/master.m3u8"
+  },
+
+  
+    {
+    id: "tt9603208",
+    type: "movie",
+    name: "Mission: Impossible - The Final Reckoning",
+    stream: "https://pulse.topstrime.online/movie/575265/s9vwt3/master.m3u8"
+  },
+
+  
+    {
+    id: "tt10548174",
+    type: "movie",
+    name: "28 ans plus tard",
+    stream: "https://pulse.topstrime.online/movie/1100988/wu59z4/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -728,6 +751,87 @@ const catalogData = [
         season: 1,
         episode: 10,
         stream: "https://pulse.topstrime.online/tv/247767/g4rycd/S1/E10/master.m3u8"
+      }
+    ]
+  },
+
+    {
+    id: "tt31407116",
+    type: "series",
+    name: "Pulse",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Il suit la vie personnelle et professionnelle des médecins et du personnel d'un centre de traumatologie très actif de Miami.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/247784/74mm21/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/247784/sx5rhv/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/247784/lads51/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/247784/j2icex/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/247784/zw6bcd/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/247784/f8y6rf/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/247784/ncm5pq/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/247784/x2x1v4/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/247784/2524kp/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/247784/tyc6ct/S1/E10/master.m3u8"
       }
     ]
   },
