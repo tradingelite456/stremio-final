@@ -342,6 +342,55 @@ const catalogData = [
     name: "Dangerous Animals",
     stream: "https://pulse.topstrime.online/movie/1285965/ojgtpp/master.m3u8"
   },
+
+   {
+    id: "tt27052633",
+    type: "movie",
+    name: "Echo Valley",
+    stream: "https://pulse.topstrime.online/movie/1097311/3xjyfc/master.m3u8"
+  },
+
+  {
+    id: "tt26342662",
+    type: "movie",
+    name: "M3GAN 2.0",
+    stream: "https://pulse.topstrime.online/movie/1071585/hp1mdn/master.m3u8"
+  },
+
+  {
+    id: "tt26743210",
+    type: "movie",
+    name: "Dragons",
+    stream: "https://pulse.topstrime.online/movie/1087192/lhg7qi/master.m3u8"
+  },
+
+   {
+    id: "tt33299083",
+    type: "movie",
+    name: "Madea : Mariage exotique",
+    stream: "https://pulse.topstrime.online/movie/1246310/68dnf3/master.m3u8"
+  },
+
+  {
+    id: "tt35669009",
+    type: "movie",
+    name: "Ziam",
+    stream: "https://pulse.topstrime.online/movie/1429744/yxkf23/master.m3u8"
+  },
+
+   {
+    id: "tt31806049",
+    type: "movie",
+    name: "Brick",
+    stream: "https://pulse.topstrime.online/movie/1425045/jieooj/master.m3u8"
+  },
+
+  {
+    id: "tt28637027",
+    type: "movie",
+    name: "Into the Deep",
+    stream: "https://pulse.topstrime.online/movie/1388808/5n8wyl/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -612,6 +661,73 @@ const catalogData = [
     ]
   },
 
+   {
+    id: "tt10946316",
+    type: "series",
+    name: "The Institute",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/253372/bwh6pf/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/253372/21o0x8/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/253372/honrep/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/253372/yimgq3/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/253372/i9rh6k/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/253372/0xvc5w/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/253372/aa8xk8/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/253372/sr9mqk/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
   {
     id: "tt24163532",
     type: "series",
@@ -860,6 +976,168 @@ const catalogData = [
         season: 1,
         episode: 10,
         stream: "https://pulse.topstrime.online/tv/247767/g4rycd/S1/E10/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt26676904",
+    type: "series",
+    name: "Ballard",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "L'inspecteur Renee Ballard de la police de Los Angeles supervise une nouvelle division chargée des affaires non résolues au sein du service.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/239826/rai9zo/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/239826/du122m/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/239826/vlhyu6/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/239826/mbuj46/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/239826/krzee3/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/239826/530rn4/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/239826/4wp2q1/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/239826/txjicp/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/239826/dlrwpk/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/239826/eqqb3m/S1/E10/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt33043892",
+    type: "series",
+    name: "Dexter : Résurrection",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Suit un studio de cinéma hollywoodien qui cherche à survivre dans un monde où il est de plus en plus difficile pour l'art et les affaires de vivre ensemble.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/259909/g5oiqa/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/259909/acmedo/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/259909/lzrpev/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/259909/8cqzr9/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/259909/1p3bhl/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/259909/1mvkwl/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/259909/k6dnt4/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/259909/0rdk49/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/259909/clnpfp/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/259909/y7y0em/S1/E10/master.m3u8"
       }
     ]
   },
