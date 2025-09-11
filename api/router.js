@@ -249,7 +249,41 @@ const catalogData = [
     name: "Les ailes collées",
     stream: "https://pulse.topstrime.online/movie/1313219/thaany/master.m3u8"
   },
-  
+
+  {
+    id: "tt30840798",
+    type: "movie",
+    name: "The Phoenician Scheme",
+    stream: "https://pulse.topstrime.online/movie/1137350/ouwbz1/master.m3u8"
+  },
+
+  {
+    id: "tt31036941",
+    type: "movie",
+    name: "Jurassic World: Renaissance",
+    stream: "https://pulse.topstrime.online/movie/1234821/jwpig0/master.m3u8"
+  },
+
+   {
+    id: "tt35404638",
+    type: "movie",
+    name: "100 millions!",
+    stream: "https://pulse.topstrime.online/movie/1309410/cavri7/master.m3u8"
+  },
+
+    {
+    id: "tt4978342",
+    type: "movie",
+    name: "My Oxford Year",
+    stream: "https://pulse.topstrime.online/movie/1307078/9o7f5l/master.m3u8"
+  },
+
+  {
+    id: "tt30253473",
+    type: "movie",
+    name: "Materialists",
+    stream: "https://pulse.topstrime.online/movie/1136867/wsexqv/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -796,6 +830,143 @@ const catalogData = [
         season: 1,
         episode: 13,
         stream: "https://pulse.topstrime.online/tv/254653/2jdvg1/S1/E13/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt37504309",
+    type: "series",
+    name: "Unspeakable Sins",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Phoebe et Max sont envoyés sous couverture pour faire face à une nouvelle menace dans la station balnéaire de Secret Shores et emmènent Chloé avec eux pour développer son talent de super-héros.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/290276/n57qzr/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/290276/gz96iq/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/290276/kcs4sw/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/290276/zjqjyr/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/290276/nftn2a/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/290276/jtp6qd/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/290276/dzvhep/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/290276/zwxcsl/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/290276/3gvqgx/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/290276/i6auqi/S1/E10/master.m3u8"
+      },
+       {
+        id: "s1e11",
+        title: "Épisode 11",
+        season: 1,
+        episode: 11,
+        stream: "https://pulse.topstrime.online/tv/290276/sxzuez/S1/E11/master.m3u8"
+      },
+      {
+        id: "s1e12",
+        title: "Épisode 12",
+        season: 1,
+        episode: 12,
+        stream: "https://pulse.topstrime.online/tv/290276/ywqc1q/S1/E12/master.m3u8"
+      },
+      {
+        id: "s1e13",
+        title: "Épisode 13",
+        season: 1,
+        episode: 13,
+        stream: "https://pulse.topstrime.online/tv/290276/9dij6b/S1/E13/master.m3u8"
+      },
+      {
+        id: "s1e14",
+        title: "Épisode 14",
+        season: 1,
+        episode: 14,
+        stream: "https://pulse.topstrime.online/tv/290276/pq57tb/S1/E14/master.m3u8"
+      },
+      {
+        id: "s1e15",
+        title: "Épisode 15",
+        season: 1,
+        episode: 15,
+        stream: "https://pulse.topstrime.online/tv/290276/0tgrda/S1/E15/master.m3u8"
+      },
+       {
+        id: "s1e16",
+        title: "Épisode 16",
+        season: 1,
+        episode: 16,
+        stream: "https://pulse.topstrime.online/tv/290276/lox819/S1/E16/master.m3u8"
+      },
+      {
+        id: "s1e17",
+        title: "Épisode 17",
+        season: 1,
+        episode: 17,
+        stream: "https://pulse.topstrime.online/tv/290276/xyou72/S1/E17/master.m3u8"
+      },
+      {
+        id: "s1e18",
+        title: "Épisode 18",
+        season: 1,
+        episode: 18,
+        stream: "https://pulse.topstrime.online/tv/290276/8c3fnf/S1/E18/master.m3u8"
       }
     ]
   },
