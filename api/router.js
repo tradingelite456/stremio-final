@@ -214,6 +214,20 @@ const catalogData = [
     name: "Zombies 4: Dawn of the Vampires",
     stream: "https://pulse.topstrime.online/movie/1243341/ybuk9j/master.m3u8"
   },
+
+    {
+    id: "tt18069420",
+    type: "movie",
+    name: "Les Schtroumpfs - Le Film",
+    stream: "https://pulse.topstrime.online/movie/936108/e0932k/master.m3u8"
+  },
+
+  {
+    id: "tt32843349",
+    type: "movie",
+    name: "Sorry, Baby",
+    stream: "https://pulse.topstrime.online/movie/1205515/eef5bc/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -576,6 +590,108 @@ const catalogData = [
         season: 1,
         episode: 12,
         stream: "https://pulse.topstrime.online/tv/248244/to8bfn/S1/E12/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt32384391",
+    type: "series",
+    name: "Les Thunderman: Incognito",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Phoebe et Max sont envoyés sous couverture pour faire face à une nouvelle menace dans la station balnéaire de Secret Shores et emmènent Chloé avec eux pour développer son talent de super-héros.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/254653/13l3xw/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/254653/gk0nb2/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/254653/5ez0tz/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/254653/iph197/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/254653/629wth/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/254653/wswo57/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/254653/9c2x4p/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/254653/6iho86/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/254653/3yb9ww/S1/E9/master.m3u8"
+      },
+      {
+        id: "s1e10",
+        title: "Épisode 10",
+        season: 1,
+        episode: 10,
+        stream: "https://pulse.topstrime.online/tv/254653/tcajxz/S1/E10/master.m3u8"
+      },
+       {
+        id: "s1e11",
+        title: "Épisode 11",
+        season: 1,
+        episode: 11,
+        stream: "https://pulse.topstrime.online/tv/254653/o98p5y/S1/E11/master.m3u8"
+      },
+      {
+        id: "s1e12",
+        title: "Épisode 12",
+        season: 1,
+        episode: 12,
+        stream: "https://pulse.topstrime.online/tv/254653/unu3y5/S1/E12/master.m3u8"
+      },
+      {
+        id: "s1e13",
+        title: "Épisode 13",
+        season: 1,
+        episode: 13,
+        stream: "https://pulse.topstrime.online/tv/254653/2jdvg1/S1/E13/master.m3u8"
       }
     ]
   },
@@ -1099,6 +1215,66 @@ const catalogData = [
         season: 1,
         episode: 6,
         stream: "https://luminous-lokum-4d3c4a.netlify.app/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt31828121",
+    type: "series",
+    name: "Halva Malmö består av killar som dumpat mig",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Une jeune femme dotée de la capacité de voir de mystérieuses connexions rouges entre les amoureux découvre que son don secret n'est plus unique lorsque des lunettes spéciales conférant des pouvoirs similaires apparaissent sur le marché noir.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/283390/4coqif/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/283390/wk8eav/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/283390/2v5b09/S1/E3/master.m3u8"
+      },
+      {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/283390/yrj79h/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/283390/7it7qy/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/283390/7gvoz1/S1/E6/master.m3u8"
+      },
+      {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/283390/1kfkee/S1/E7/master.m3u8"
       }
     ]
   }
