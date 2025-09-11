@@ -314,6 +314,34 @@ const catalogData = [
     name: "Osiris",
     stream: "https://pulse.topstrime.online/movie/1241470/auauhy/master.m3u8"
   },
+
+   {
+    id: "tt31868189",
+    type: "movie",
+    name: "Happy Gilmore 2",
+    stream: "https://pulse.topstrime.online/movie/1263256/ufwl6n/master.m3u8"
+  },
+
+  {
+    id: "tt31193064",
+    type: "movie",
+    name: "Mikado",
+    stream: "https://pulse.topstrime.online/movie/1099985/ehkeaw/master.m3u8"
+  },
+
+   {
+    id: "tt35661599",
+    type: "movie",
+    name: "Les condés",
+    stream: "https://pulse.topstrime.online/movie/1407934/d6gp3q/master.m3u8"
+  },
+
+    {
+    id: "tt32299316",
+    type: "movie",
+    name: "Dangerous Animals",
+    stream: "https://pulse.topstrime.online/movie/1285965/ojgtpp/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -580,6 +608,80 @@ const catalogData = [
         season: 1,
         episode: 8,
         stream: "https://pulse.topstrime.online/tv/209876/pcawzz/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt24163532",
+    type: "series",
+    name: "Smoke",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Un détective troublé et un énigmatique enquêteur sur les incendies criminels vont suivre les traces de deux incendiaires en série.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/215995/pdj2p5/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/215995/1uove5/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/215995/4m7z4i/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/215995/i8fhyt/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/215995/7g37sq/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/215995/6g9bes/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/215995/nw9gxp/S1/E7/master.m3u8"
+      },
+      {
+        id: "s1e8",
+        title: "Épisode 8",
+        season: 1,
+        episode: 8,
+        stream: "https://pulse.topstrime.online/tv/215995/u5sbl9/S1/E8/master.m3u8"
+      },
+      {
+        id: "s1e9",
+        title: "Épisode 9",
+        season: 1,
+        episode: 9,
+        stream: "https://pulse.topstrime.online/tv/215995/eehzep/S1/E9/master.m3u8"
       }
     ]
   },
