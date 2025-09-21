@@ -757,10 +757,65 @@ const catalogData = [
         season: 1,
         episode: 7,
         stream: "https://pulse.topstrime.online/tv/277544/w9q300/S1/E7/master.m3u8"
-      },
+      }
      
     ]
   },
+
+  {
+    id: "tt26672404",
+    type: "series",
+    name: "Butterfly",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/227114/561noy/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/227114/1fpfdh/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/227114/itiofr/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/227114/buh6r8/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/227114/eilldl/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/227114/jomjvu/S1/E6/master.m3u8"
+      }
+     
+    ]
+  },
+  
 
   {
     id: "tt26576161",
