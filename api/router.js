@@ -391,6 +391,21 @@ const catalogData = [
     name: "Into the Deep",
     stream: "https://pulse.topstrime.online/movie/1388808/5n8wyl/master.m3u8"
   },
+
+  
+  {
+    id: "tt37674426",
+    type: "movie",
+    name: "Numéro inconnu : Textos toxiques au lycée",
+    stream: "https://pulse.topstrime.online/movie/1517772/7h7beh/master.m3u8"
+  },
+  
+  {
+    id: "tt33549478",
+    type: "movie",
+    name: "La carte qui mène jusqu'à toi",
+    stream: "https://pulse.topstrime.online/movie/1312946/zvgq7v/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -657,6 +672,145 @@ const catalogData = [
         season: 1,
         episode: 8,
         stream: "https://pulse.topstrime.online/tv/209876/pcawzz/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
+{
+    id: "tt28013708",
+    type: "series",
+    name: "Task",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/228305/23vlf7/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/228305/t4ejrv/S1/E2/master.m3u8"
+      }
+    ]
+  },
+
+  {
+    id: "tt34683603",
+    type: "series",
+    name: "Pour le meilleur et à l'aveugle",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/277544/jrnuf8/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/277544/3jjxhr/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/277544/db74q7/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/277544/rttduv/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/277544/rwscdc/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/277544/rbcg5j/S1/E6/master.m3u8"
+      },
+       {
+        id: "s1e7",
+        title: "Épisode 7",
+        season: 1,
+        episode: 7,
+        stream: "https://pulse.topstrime.online/tv/277544/w9q300/S1/E7/master.m3u8"
+      },
+     
+    ]
+  },
+
+  {
+    id: "tt26576161",
+    type: "series",
+    name: "The Terminal List: Dark Wolf",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://pulse.topstrime.online/tv/219760/tzvpgr/S1/E1/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://pulse.topstrime.online/tv/219760/n2cv3n/S1/E2/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://pulse.topstrime.online/tv/219760/lqzxfa/S1/E3/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://pulse.topstrime.online/tv/219760/t2ayaf/S1/E4/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://pulse.topstrime.online/tv/219760/b5yz9d/S1/E5/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://pulse.topstrime.online/tv/219760/wciajf/S1/E6/master.m3u8"
       }
     ]
   },
