@@ -406,6 +406,19 @@ const catalogData = [
     name: "La carte qui mène jusqu'à toi",
     stream: "https://pulse.topstrime.online/movie/1312946/zvgq7v/master.m3u8"
   },
+  {
+    id: "tt31434030",
+    type: "movie",
+    name: "Dracula",
+    stream: "https://effervescent-hummingbird-27fbb5.netlify.app/master.m3u8"
+  },
+
+ {
+    id: "tt30645201",
+    type: "movie",
+    name: "Honey Don't!",
+    stream: "https://elegant-hotteok-0e9767.netlify.app/master.m3u8"
+  },
   
    {
     id: "tt30973842",
@@ -672,6 +685,59 @@ const catalogData = [
         season: 1,
         episode: 8,
         stream: "https://pulse.topstrime.online/tv/209876/pcawzz/S1/E8/master.m3u8"
+      }
+    ]
+  },
+
+   {
+    id: "tt32267726",
+    type: "series",
+    name: "The Girlfriend",
+    poster: fetchPosterFromIMDb("tt13443470"),
+    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
+    genres: ["Comedy", "Fantasy"],
+    videos: [
+      {
+        id: "s1e1",
+        title: "Épisode 1",
+        season: 1,
+        episode: 1,
+        stream: "https://sweet-toffee-7a80b0.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e2",
+        title: "Épisode 2",
+        season: 1,
+        episode: 2,
+        stream: "https://luminous-jelly-02f9ee.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e3",
+        title: "Épisode 3",
+        season: 1,
+        episode: 3,
+        stream: "https://superb-beignet-55e5ce.netlify.app/master.m3u8"
+      },
+        {
+        id: "s1e4",
+        title: "Épisode 4",
+        season: 1,
+        episode: 4,
+        stream: "https://effulgent-kitsune-a35575.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e5",
+        title: "Épisode 5",
+        season: 1,
+        episode: 5,
+        stream: "https://sweet-cocada-86bf72.netlify.app/master.m3u8"
+      },
+      {
+        id: "s1e6",
+        title: "Épisode 6",
+        season: 1,
+        episode: 6,
+        stream: "https://inquisitive-sundae-6a3ac7.netlify.app/master.m3u8"
       }
     ]
   },
