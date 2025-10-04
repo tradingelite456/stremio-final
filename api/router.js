@@ -949,7 +949,7 @@ const catalogData = [
         title: "Épisode 1",
         season: 1,
         episode: 1,
-        stream: "https://pulse.topstrime.online/tv/245648/19s7xh/S1/E1/master.m3u8"
+        stream: "https://sparkling-puppy-f5f5f6.netlify.app/master.m3u8"
       },
       {
         id: "s1e2",
