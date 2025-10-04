@@ -1,5 +1,124 @@
 // api/router.js
 
+const TMDB_READ_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIwYTM5M2RkZWNkNDE2NGNmZDk3OWM4NmRjYWEzYjlhNiIsIm5iZiI6MTc1OTYwMjUxMy44MjYsInN1YiI6IjY4ZTE2NzUxMWFlMmZmODljMWJkOTBhZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.1rUCLFHfZMkvDdRY8_MR-PDeaLFOMcOVi7tICWPTkjU";
+
+const tmdbCache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000;
+
+async function fetchFromTMDB(endpoint) {
+  const cacheKey = endpoint;
+  const cached = tmdbCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+
+  const url = `https://api.themoviedb.org/3${endpoint}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${TMDB_READ_ACCESS_TOKEN}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`TMDB API error: ${response.status} for ${url}`);
+      return null;
+    }
+
+    const data = await response.json();
+    tmdbCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.error('TMDB fetch error:', error);
+    return null;
+  }
+}
+
+async function enrichMetadataFromIMDB(imdbId) {
+  try {
+    const findData = await fetchFromTMDB(`/find/${imdbId}?external_source=imdb_id&language=fr-FR`);
+    if (!findData) return null;
+
+    const basicInfo = findData.movie_results?.[0] || findData.tv_results?.[0];
+    if (!basicInfo) return null;
+
+    const isMovie = !!basicInfo.title;
+    const tmdbId = basicInfo.id;
+
+    const endpoint = isMovie
+      ? `/movie/${tmdbId}?language=fr-FR&append_to_response=videos,credits,images`
+      : `/tv/${tmdbId}?language=fr-FR&append_to_response=videos,credits,images`;
+
+    const details = await fetchFromTMDB(endpoint);
+    if (!details) return null;
+
+    const getImageUrl = (path, size = 'original') => {
+      return path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
+    };
+
+    const findBestLogo = (images) => {
+      if (!images?.logos) return null;
+      const frenchLogo = images.logos.find(logo => logo.iso_639_1 === 'fr');
+      const englishLogo = images.logos.find(logo => logo.iso_639_1 === 'en');
+      const anyLogo = images.logos.find(logo => !logo.iso_639_1);
+      const selectedLogo = frenchLogo || englishLogo || anyLogo || images.logos[0];
+      return selectedLogo ? getImageUrl(selectedLogo.file_path) : null;
+    };
+
+    const extractTrailerUrl = (videos) => {
+      if (!videos?.results) return null;
+      const trailer = videos.results.find(v =>
+        v.type === 'Trailer' && (v.site === 'YouTube' || v.site === 'Vimeo')
+      );
+      if (!trailer) return null;
+      return trailer.site === 'YouTube'
+        ? `https://www.youtube.com/watch?v=${trailer.key}`
+        : `https://vimeo.com/${trailer.key}`;
+    };
+
+    const extractCast = (credits, limit = 10) => {
+      if (!credits?.cast) return [];
+      return credits.cast.slice(0, limit).map(person => ({
+        name: person.name,
+        character: person.character,
+        profilePath: getImageUrl(person.profile_path, 'w185')
+      }));
+    };
+
+    return {
+      tmdbId: details.id,
+      imdbId: imdbId,
+      type: isMovie ? 'movie' : 'series',
+      name: isMovie ? details.title : details.name,
+      description: details.overview || '',
+      poster: getImageUrl(details.poster_path, 'w500'),
+      background: getImageUrl(details.backdrop_path, 'original'),
+      logo: findBestLogo(details.images),
+      genres: details.genres?.map(g => g.name) || [],
+      releaseInfo: isMovie
+        ? details.release_date?.split('-')[0]
+        : `${details.first_air_date?.split('-')[0]}${details.in_production ? '-' : `-${details.last_air_date?.split('-')[0]}`}`,
+      imdbRating: details.vote_average ? details.vote_average.toFixed(1) : null,
+      voteCount: details.vote_count,
+      runtime: isMovie ? details.runtime : details.episode_run_time?.[0],
+      cast: extractCast(details.credits, 10),
+      director: isMovie
+        ? details.credits?.crew?.find(c => c.job === 'Director')?.name
+        : details.created_by?.[0]?.name,
+      trailer: extractTrailerUrl(details.videos),
+      tagline: details.tagline,
+      status: details.status,
+      productionCompanies: details.production_companies?.map(c => c.name) || []
+    };
+  } catch (error) {
+    console.error(`Error enriching metadata for ${imdbId}:`, error);
+    return null;
+  }
+}
+
 // === Helpers ===
 function sendJSON(res, obj, status = 200) {
   res.setHeader("Content-Type", "application/json");
@@ -19,2706 +138,788 @@ function fetchPosterFromIMDb(id) {
   return `https://images.metahub.space/poster/small/${id}/img`;
 }
 
+const metadataCache = new Map();
+
+async function getEnrichedMetadata(imdbId, fallbackData) {
+  if (metadataCache.has(imdbId)) {
+    return metadataCache.get(imdbId);
+  }
+
+  const tmdbData = await enrichMetadataFromIMDB(imdbId);
+
+  if (!tmdbData) {
+    return fallbackData;
+  }
+
+  const enriched = {
+    ...fallbackData,
+    name: tmdbData.name || fallbackData.name,
+    description: tmdbData.description || fallbackData.description,
+    poster: tmdbData.poster || fallbackData.poster,
+    background: tmdbData.background || fallbackData.background,
+    logo: tmdbData.logo || fallbackData.logo,
+    genres: tmdbData.genres.length > 0 ? tmdbData.genres : fallbackData.genres,
+    releaseInfo: tmdbData.releaseInfo || fallbackData.releaseInfo,
+    imdbRating: tmdbData.imdbRating || fallbackData.imdbRating,
+    runtime: tmdbData.runtime,
+    cast: tmdbData.cast,
+    director: tmdbData.director,
+    trailer: tmdbData.trailer,
+    tagline: tmdbData.tagline,
+    voteCount: tmdbData.voteCount,
+    status: tmdbData.status,
+    productionCompanies: tmdbData.productionCompanies
+  };
+
+  metadataCache.set(imdbId, enriched);
+  return enriched;
+}
+
 // === Catalogue ===
 const catalogData = [
   {
-    id: "tt20969586",
-    type: "movie",
-    name: "Thunderbolt",
-    poster: fetchPosterFromIMDb("tt20969586"),
-    stream: "https://pulse.topstrime.online/movie/986056/82nb0j/master.m3u8"
+    id: "ttseries_villa",
+    type: "series",
+    name: "La Villa des coeurs brisés",
+    poster: "https://photos.tf1.fr/217/289/program-card-coaching-emine-maissanne-ep21-1a6928-eb1200-0@3x.jpg",
+    background: "https://images1.persgroep.net/rcs/-zRbIHTq5GfByBRo528B0boVfxY/diocontent/260937823/_fitwidth/1400?appId=038a353bad43ac27fd436dc5419c256b&quality=0.8&format=webp",
+    logo: "https://photos.tf1.fr/220/110/logo-programme-la-villa-2025-0e5a1d-72c6f5-0@3x.png",  
+    description: "Ils sont plébiscités par le public pour avoir vécu des histoires d'amour qui se sont mal terminées... Nous allons les aider à reprendre confiance en eux et leur donner toutes les clés pour séduire, afin qu'ils puissent, enfin, trouver le GRAND AMOUR !",
+    genres: ["Reality", "Drama"],
+    releaseInfo: "2025",
+    imdbRating: "6.5",
+    // Episodes organisés par saison
+    episodes: {
+      10: [
+
+           {
+          id: "ttseries_villa:10:1",
+          title: "Épisode 1",
+          season: 10,
+          episode: 1,
+          overview: "Épisode 1 de la saison 10",
+          released: "2025-08-10T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-01-du-11-aout-2025-90165525-1755069694-b9ffe9-36fe10-0@1x.jpg",
+          stream: "https://preeminent-zuccutto-7d84c8.netlify.app/S10E1/S10E1.m3u8"
+        },
+            {
+          id: "ttseries_villa:10:2",
+          title: "Épisode 2",
+          season: 10,
+          episode: 2,
+          overview: "Épisode 2 de la saison 10",
+          released: "2025-08-11T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-02-du-11-aout-2025-23214497-1755069707-05f308-86b4ce-0@1x.jpg",
+          stream: "https://velvety-rugelach-5ae261.netlify.app/S10E2.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:3",
+          title: "Épisode 3",
+          season: 10,
+          episode: 3,
+          overview: "Épisode 3 de la saison 10",
+          released: "2025-08-12T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-03-du-12-aout-2025-11366497-1755070020-7c51f2-a7e98d-0@2x.jpg",
+          stream: "https://splendorous-taffy-ba0b65.netlify.app/S10E3.m3u8"
+        },
+
+           {
+          id: "ttseries_villa:10:4",
+          title: "Épisode 4",
+          season: 10,
+          episode: 4,
+          overview: "Épisode 4 de la saison 10",
+          released: "2025-08-13T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-04-du-13-aout-2025-60236528-1755070104-e37445-5ba6af-0@1x.jpg",
+          stream: "https://cheery-sawine-575a8f.netlify.app/S10E4.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:5",
+          title: "Épisode 5",
+          season: 10,
+          episode: 5,
+          overview: "Épisode 5 de la saison 10",
+          released: "2025-08-14T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-05-du-14-aout-2025-53256673-1755151264-55e317-632fcf-0@3x.jpg",
+          stream: "https://zesty-croquembouche-215d40.netlify.app/S10E5.m3u8"
+        },
+
+          {
+          id: "ttseries_villa:10:6",
+          title: "Épisode 6",
+          season: 10,
+          episode: 6,
+          overview: "Épisode 6 de la saison 10",
+          released: "2025-08-15T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-06-du-15-aout-2025-75913350-1755498259-3e6008-c85024-0@1x.webp",
+          stream: "https://cool-kitsune-85a095.netlify.app/S10E6.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:7",
+          title: "Épisode 7",
+          season: 10,
+          episode: 7,
+          overview: "Épisode 7 de la saison 10",
+          released: "2025-08-18T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-07-du-18-aout-2025-31199021-1755498284-9e1cc7-c86ce7-0@1x.jpg",
+          stream: "https://animated-blini-0b7203.netlify.app/S10E7.m3u8"
+        },
+            {
+          id: "ttseries_villa:10:8",
+          title: "Épisode 8",
+          season: 10,
+          episode: 8,
+          overview: "Épisode 8 de la saison 10",
+          released: "2025-08-19T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-08-du-19-aout-2025-58700996-1755589590-e62065-87a548-0@1x.webp",
+          stream: "https://polite-liger-ac90a3.netlify.app/S10E8.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:9",
+          title: "Épisode 9",
+          season: 10,
+          episode: 9,
+          overview: "Épisode 9 de la saison 10",
+          released: "2025-08-20T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-09-du-20-aout-2025-49388030-1755687532-735302-189899-0@1x.jpg",
+          stream: "https://rococo-fenglisu-db2b7e.netlify.app/S10E9.m3u8"
+        },
+
+          {
+          id: "ttseries_villa:10:10",
+          title: "Épisode 10",
+          season: 10,
+          episode: 10,
+          overview: "Épisode 10 de la saison 10",
+          released: "2025-08-21T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-10-du-21-aout-2025-71447607-1755760241-68f4ed-0c1989-0@1x.jpg",
+          stream: "https://benevolent-beignet-f0dfab.netlify.app/S10E10.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:11",
+          title: "Épisode 11",
+          season: 10,
+          episode: 11,
+          overview: "Épisode 11 de la saison 10",
+          released: "2025-08-22T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-11-du-22-aout-2025-07016282-1755847088-3dd892-aefad7-0@1x.webp",
+          stream: "https://neon-pony-05b704.netlify.app/S10E11.m3u8"
+        },
+
+         {
+          id: "ttseries_villa:10:12",
+          title: "Épisode 12",
+          season: 10,
+          episode: 12,
+          overview: "Épisode 12 de la saison 10",
+          released: "2025-08-25T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-12-du-25-aout-2025-79395394-1756192375-8bad02-591a5d-0@1x.jpg",
+          stream: "https://lucky-cassata-616d0c.netlify.app/S10E12.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:13",
+          title: "Épisode 13",
+          season: 10,
+          episode: 13,
+          overview: "Épisode 13 de la saison 10",
+          released: "2025-08-26T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-13-du-26-aout-2025-07980971-1756188319-65a87f-048d64-0@1x.webp",
+          stream: "https://illustrious-rolypoly-4f16b8.netlify.app/S10E13.m3u8"
+        },
+      {
+          id: "ttseries_villa:10:14",
+          title: "Épisode 14",
+          season: 10,
+          episode: 14,
+          overview: "Épisode 14 de la saison 10",
+          released: "2025-08-27T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/548/308/la-villa-des-coeurs-brises-saison-10-episode-14-du-27-aout-2025-47599360-1756282917-a88048-ff31fb-0@3x.jpg",
+          stream: "https://magenta-trifle-c3506b.netlify.app/S10E14.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:15",
+          title: "Épisode 15",
+          season: 10,
+          episode: 15,
+          overview: "Épisode 15 de la saison 10",
+          released: "2025-08-28T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-15-du-28-aout-2025-64115472-1756367686-9c703c-0872da-0@1x.webp",
+          stream: "https://timely-lolly-490ca8.netlify.app/S10E15.m3u8"
+        },
+
+        
+       {
+          id: "ttseries_villa:10:16",
+          title: "Épisode 16",
+          season: 10,
+          episode: 16,
+          overview: "Épisode 16 de la saison 10",
+          released: "2025-08-29T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-16-du-29-aout-2025-71089926-1756454557-a189cc-85d6e8-0@2x.webp",
+          stream: "https://subtle-beignet-21581a.netlify.app/S10E16.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:17",
+          title: "Épisode 17",
+          season: 10,
+          episode: 17,
+          overview: "Épisode 17 de la saison 10",
+          released: "2025-09-01T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-17-du-1-septembre-2025-79086667-1756712108-719d4d-8d9ef6-0@1x.jpg",
+          stream: "https://superlative-cupcake-a669e2.netlify.app/S10E17.m3u8"
+        },
+        
+          {
+          id: "ttseries_villa:10:18",
+          title: "Épisode 18",
+          season: 10,
+          episode: 18,
+          overview: "Épisode 18 de la saison 10",
+          released: "2025-09-02T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-18-du-2-septembre-2025-68780722-1756799320-8eb1c1-7da9b1-0@3x.jpg",
+          stream: "https://melodious-malasada-dc46b9.netlify.app/S10E18.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:19",
+          title: "Épisode 19",
+          season: 10,
+          episode: 19,
+          overview: "Épisode 19 de la saison 10",
+          released: "2025-09-03T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/la-villa-des-coeurs-brises-saison-10-episode-19-du-3-septembre-2025-45502972-1756884112-d56387-e0bfa0-0@1x.jpg",
+          stream: "https://timely-truffle-6ae782.netlify.app/S10E19.m3u8"
+        },
+        
+        {
+          id: "ttseries_villa:10:20",
+          title: "Épisode 20",
+          season: 10,
+          episode: 20,
+          overview: "Épisode 20 de la saison 10",
+          released: "2025-09-04T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-20-du-4-septembre-2025-22517739-1757057517-be7616-60b660-0@1x.jpg",
+          stream: "https://euphonious-sunburst-bb4226.netlify.app/S10E20.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:21",
+          title: "Épisode 21",
+          season: 10,
+          episode: 21,
+          overview: "Épisode 21 de la saison 10",
+          released: "2025-09-05T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/la-villa-des-coeurs-brises-saison-10-episode-21-du-5-septembre-2025-16143143-1757057560-04aab9-2ff192-0@1x.webp",
+          stream: "https://dulcet-granita-d67f95.netlify.app/S10E21.m3u8"
+        },
+        
+        {
+          id: "ttseries_villa:10:22",
+          title: "Épisode 22",
+          season: 10,
+          episode: 22,
+          overview: "Épisode 22 de la saison 10",
+          released: "2025-09-08T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-18-du-2-septembre-2025-31586572-1756106139-48428a-e6db9f-0@3x.jpg",
+          stream: "https://dainty-bienenstitch-92bfd0.netlify.app/Video.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:23",
+          title: "Épisode 23",
+          season: 10,
+          episode: 23,
+          overview: "Épisode 23 de la saison 10",
+          released: "2025-09-09T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/1200/720/avant-premiere-la-villa-saison-10-episode-23-du-9-septembre-2025-78936117-1756712122-39e62b-3fa70b-0@1x.jpg",
+          stream: "https://super-creponne-012bcc.netlify.app/S10E23.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:24",
+          title: "Épisode 24",
+          season: 10,
+          episode: 24,
+          overview: "Épisode 24 de la saison 10",
+          released: "2025-09-10T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-24-du-10-septembre-2025-04968679-1757397549-d001c6-d4b157-0@3x.jpg",
+          stream: "https://chic-twilight-494a45.netlify.app/master.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:25",
+          title: "Épisode 25",
+          season: 10,
+          episode: 25,
+          overview: "Épisode 25 de la saison 10",
+          released: "2025-09-11T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-25-du-11-septembre-2025-62314241-1757397519-942251-12921b-0@3x.webp",
+          stream: "https://stately-youtiao-b39da3.netlify.app/master.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:26",
+          title: "Épisode 26",
+          season: 10,
+          episode: 26,
+          overview: "Épisode 26 de la saison 10",
+          released: "2025-09-12T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-26-du-12-septembre-2025-35469899-1757402771-a96be3-6e890b-0@3x.webp",
+          stream: "https://stirring-marshmallow-f14089.netlify.app/master.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:27",
+          title: "Épisode 27",
+          season: 10,
+          episode: 27,
+          overview: "Épisode 27 de la saison 10",
+          released: "2025-09-13T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/la-villa-des-coeurs-brises-saison-10-episode-27-du-15-septembre-2025-87848099-1757958813-57d813-8af2ca-0@3x.jpg",
+          stream: "https://elegant-syrniki-d416bb.netlify.app/master.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:28",
+          title: "Épisode 28",
+          season: 10,
+          episode: 28,
+          overview: "Épisode 28 de la saison 10",
+          released: "2025-09-16T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/la-villa-des-coeurs-brises-saison-10-episode-28-du-16-septembre-2025-81396062-1758033387-f4c788-290e4a-0@3x.webp",
+          stream: "https://stellular-nasturtium-349902.netlify.app/master.m3u8"
+        },
+        {
+          id: "ttseries_villa:10:29",
+          title: "Épisode 29",
+          season: 10,
+          episode: 29,
+          overview: "Épisode 29 de la saison 10",
+          released: "2025-09-17T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-29-du-17-septembre-2025-80793336-1757668511-0e0301-84b7f6-0@3x.webp",
+          stream: "https://curious-cupcake-aa33e2.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:30",
+          title: "Épisode 30",
+          season: 10,
+          episode: 30,
+          overview: "Épisode 30 de la saison 10",
+          released: "2025-09-18T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-30-du-18-septembre-2025-08894233-1757921658-c4fd52-037537-0@3x.webp",
+          stream: "https://darling-tapioca-723401.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:31",
+          title: "Épisode 31",
+          season: 10,
+          episode: 31,
+          overview: "Épisode 31 de la saison 10",
+          released: "2025-09-19T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-31-du-19-septembre-2025-37152138-1757397339-6e5b23-ac4083-0@3x.jpg",
+          stream: "https://beautiful-genie-f83a9d.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:32",
+          title: "Épisode 32",
+          season: 10,
+          episode: 32,
+          overview: "Épisode 32 de la saison 10",
+          released: "2025-09-20T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-32-du-22-septembre-2025-40038583-1757905813-6121f6-213eb1-0@3x.jpg",
+          stream: "https://monumental-dodol-df2c20.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:33",
+          title: "Épisode 33",
+          season: 10,
+          episode: 33,
+          overview: "Épisode 33 de la saison 10",
+          released: "2025-09-21T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-33-du-23-septembre-2025-31902648-1757905784-d9c4f0-d1adf7-0@3x.jpg",
+          stream: "https://quiet-capybara-50244f.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:34",
+          title: "Épisode 34",
+          season: 10,
+          episode: 34,
+          overview: "Épisode 34 de la saison 10",
+          released: "2025-09-24T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-34-du-24-septembre-2025-81035680-1758111918-9e466a-49b2be-0@3x.jpg",
+          stream: "https://phenomenal-dodol-7148d4.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:35",
+          title: "Épisode 35",
+          season: 10,
+          episode: 35,
+          overview: "Épisode 35 de la saison 10",
+          released: "2025-09-25T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-35-du-25-septembre-2025-90412389-1758111884-132788-26a8a2-0@3x.jpg",
+          stream: "https://tangerine-sunburst-795d8d.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:36",
+          title: "Épisode 36",
+          season: 10,
+          episode: 36,
+          overview: "Épisode 36 de la saison 10",
+          released: "2025-09-26T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-36-du-26-septembre-2025-79545661-1758111871-0a62a9-2f3d38-0@3x.jpg",
+          stream: "https://heartfelt-trifle-bf3b55.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:37",
+          title: "Épisode 37",
+          season: 10,
+          episode: 37,
+          overview: "Épisode 37 de la saison 10",
+          released: "2025-09-27T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-37-du-29-septembre-2025-59418831-1758702852-aee04b-4c0021-0@3x.jpg",
+          stream: "https://admirable-pony-f170c2.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:38",
+          title: "Épisode 38",
+          season: 10,
+          episode: 38,
+          overview: "Épisode 38 de la saison 10",
+          released: "2025-09-28T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-38-du-30-septembre-2025-20373680-1758702827-85fe2d-0092cf-0@3x.jpg",
+          stream: "https://fantastic-treacle-85dcb0.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:39",
+          title: "Épisode 39",
+          season: 10,
+          episode: 39,
+          overview: "Épisode 39 de la saison 10",
+          released: "2025-09-30T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-39-du-1-octobre-2025-38599584-1758807587-14c0f0-b33bbc-0@3x.jpg",
+          stream: "https://eclectic-jalebi-0548b9.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:40",
+          title: "Épisode 40",
+          season: 10,
+          episode: 40,
+          overview: "Épisode 40 de la saison 10",
+          released: "2025-10-01T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-40-du-2-octobre-2025-62793645-1759129357-87317b-416f94-0@3x.jpg",
+          stream: "https://cool-queijadas-bd6520.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:41",
+          title: "Épisode 41",
+          season: 10,
+          episode: 41,
+          overview: "Épisode 41 de la saison 10",
+          released: "2025-10-02T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-41-du-3-octobre-2025-28133267-1759129375-3b484e-225e60-0@3x.jpg",
+          stream: "https://polite-pasca-75f801.netlify.app/master.m3u8"
+        },
+         {
+          id: "ttseries_villa:10:42",
+          title: "Épisode 42",
+          season: 10,
+          episode: 42,
+          overview: "Épisode 42 de la saison 10",
+          released: "2025-10-04T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/avant-premiere-la-villa-saison-10-episode-42-du-6-octobre-2025-88848561-1759129401-646d81-3e1a7e-0@3x.jpg",
+          stream: "https://celadon-arithmetic-e60bd6.netlify.app/master.m3u8"
+        }
+      ]
+    }
   },
 
  {
-    id: "tt35300972",
-    type: "movie",
-    name: "Lune de miel avec ma mère",
-    stream: "https://pulse.topstrime.online/movie/1361622/o4rzet/master.m3u8"
-  },
-   {
-    id: "tt15049366",
-    type: "movie",
-    name: "Les Bodin's en Thaïlande",
-    stream: "https://pulse.topstrime.online/movie/874294/5av1y5/master.m3u8"
-  },
-
-   {
-    id: "tt27675583",
-    type: "movie",
-    name: "Almost Cops",
-    stream: "https://pulse.topstrime.online/movie/1374534/k5sr6f/master.m3u8"
-  },
-
-    {
-    id: "tt10456740",
-    type: "movie",
-    name: "Balle Perdue",
-    stream: "https://pulse.topstrime.online/movie/706503/9b4mru/master.m3u8"
-  },
-    {
-    id: "tt14465706",
-    type: "movie",
-    name: "Balle Perdue 2",
-    stream: "https://pulse.topstrime.online/movie/948276/fngfyb/master.m3u8"
-  },
-    {
-    id: "tt29768333",
-    type: "movie",
-    name: "Balle Perdue 3",
-    stream: "https://pulse.topstrime.online/movie/1144430/pygy75/master.m3u8"
-  },
-
-  {
-    id: "tt34190272",
-    type: "movie",
-    name: "Enemis",
-    stream: "https://pulse.topstrime.online/movie/1285406/umd7qg/master.m3u8"
-  },
-
-   {
-    id: "tt26452781",
-    type: "movie",
-    name: "Marked Men",
-    stream: "https://heartfelt-tulumba-056f93.netlify.app/master.m3u8"
-  },
-
-   {
-    id: "tt23060698",
-    type: "movie",
-    name: "La nuit des clowns",
-    stream: "https://pulse.topstrime.online/movie/713364/yl5689/master.m3u8"
-  },
-
-  {
-    id: "tt12001534",
-    type: "movie",
-    name: "Le Murder Club du jeudi",
-    stream: "https://pulse.topstrime.online/movie/744653/m96tzk/master.m3u8"
-  },
-
-  {
-    id: "tt8785038",
-    type: "movie",
-    name: "Couic !",
-    stream: "https://shiny-zabaione-b12d33.netlify.app/master.m3u8"
-  },
-
-  {
-    id: "tt31184028",
-    type: "movie",
-    name: "Together",
-    stream: "https://pulse.topstrime.online/movie/1242011/k2jkz3/master.m3u8"
-  },
-
-  {
-    id: "tt14760886",
-    type: "movie",
-    name: "Free fall",
-    stream: "https://pulse.topstrime.online/movie/650033/x3aj83/master.m3u8"
-  },
-
-   {
-    id: "tt4045450",
-    type: "movie",
-    name: "Souviens-toi... l'été dernier",
-    stream: "https://pulse.topstrime.online/movie/1083433/qhq61h/master.m3u8"
-  },
-
-    {
-    id: "tt35077924",
-    type: "movie",
-    name: "On ira",
-    stream: "https://pulse.topstrime.online/movie/1003504/i09w9p/master.m3u8"
-  },
-
-    {
-    id: "tt15004066",
-    type: "movie",
-    name: "Atoman",
-    stream: "https://pulse.topstrime.online/movie/869048/inhwy5/master.m3u8"
-  },
-
-  {
-    id: "tt4900148",
-    type: "movie",
-    name: "Elio",
-    stream: "https://pulse.topstrime.online/movie/1022787/su92dr/master.m3u8"
-  },
- {
-    id: "tt30017619",
-    type: "movie",
-    name: "Les Bad Guys 2",
-    stream: "https://pulse.topstrime.online/movie/1175942/9504aw/master.m3u8"
-  },
-
-  {
-    id: "tt35705226",
-    type: "movie",
-    name: "Moon Le Panda",
-    stream: "https://pulse.topstrime.online/movie/1178532/j7uu5w/master.m3u8"
-  },
-
-  {
-    id: "tt31176520",
-    type: "movie",
-    name: "Eddington",
-    stream: "https://pulse.topstrime.online/movie/648878/p5l1ku/master.m3u8"
-  },
-
-  {
-    id: "tt21317634",
-    type: "movie",
-    name: "Bride Hard",
-    stream: "https://pulse.topstrime.online/movie/1124619/v5hfbp/master.m3u8"
-  },
-
-  {
-    id: "tt1674782",
-    type: "movie",
-    name: "Karate Kid: Legends",
-    stream: "https://pulse.topstrime.online/movie/1011477/pj6wor/master.m3u8"
-  },
-
-  {
-    id: "tt32535595",
-    type: "movie",
-    name: "Doux Jésus",
-    stream: "https://pulse.topstrime.online/movie/1284514/2wos5f/master.m3u8"
-  },
-
-  {
-    id: "tt5950044",
-    type: "movie",
-    name: "Superman",
-    stream: "https://pulse.topstrime.online/movie/1061474/9pbrb4/master.m3u8"
-  },
-
-  
-  {
-    id: "tt31194612",
-    type: "movie",
-    name: "Highest 2 Lowest",
-    stream: "https://rainbow-dragon-dc7db7.netlify.app/master.m3u8"
-  },
-
-{
-    id: "tt12908150",
-    type: "movie",
-    name: "Life of Chuck",
-    stream: "https://pulse.topstrime.online/movie/842924/d3b1j8/master.m3u8"
-  },
-
-  {
-    id: "tt31241595",
-    type: "movie",
-    name: "Zombies 4: Dawn of the Vampires",
-    stream: "https://pulse.topstrime.online/movie/1243341/ybuk9j/master.m3u8"
-  },
-
-    {
-    id: "tt18069420",
-    type: "movie",
-    name: "Les Schtroumpfs - Le Film",
-    stream: "https://pulse.topstrime.online/movie/936108/e0932k/master.m3u8"
-  },
-
-  {
-    id: "tt32843349",
-    type: "movie",
-    name: "Sorry, Baby",
-    stream: "https://pulse.topstrime.online/movie/1205515/eef5bc/master.m3u8"
-  },
-
-  {
-    id: "tt33610694",
-    type: "movie",
-    name: "Le Routard",
-    stream: "https://pulse.topstrime.online/movie/1191666/b17ttv/master.m3u8"
-  },
-
-  {
-    id: "tt26581740",
-    type: "movie",
-    name: "Évanouis",
-    stream: "https://pulse.topstrime.online/movie/1078605/uonl8b/master.m3u8"
-  },
-
-{
-    id: "tt33398195",
-    type: "movie",
-    name: "Les ailes collées",
-    stream: "https://pulse.topstrime.online/movie/1313219/thaany/master.m3u8"
-  },
-
-  {
-    id: "tt30840798",
-    type: "movie",
-    name: "The Phoenician Scheme",
-    stream: "https://pulse.topstrime.online/movie/1137350/ouwbz1/master.m3u8"
-  },
-
-  {
-    id: "tt31036941",
-    type: "movie",
-    name: "Jurassic World: Renaissance",
-    stream: "https://pulse.topstrime.online/movie/1234821/jwpig0/master.m3u8"
-  },
-
-   {
-    id: "tt35404638",
-    type: "movie",
-    name: "100 millions!",
-    stream: "https://pulse.topstrime.online/movie/1309410/cavri7/master.m3u8"
-  },
-
-    {
-    id: "tt4978342",
-    type: "movie",
-    name: "My Oxford Year",
-    stream: "https://pulse.topstrime.online/movie/1307078/9o7f5l/master.m3u8"
-  },
-
-  {
-    id: "tt30253473",
-    type: "movie",
-    name: "Materialists",
-    stream: "https://pulse.topstrime.online/movie/1136867/wsexqv/master.m3u8"
-  },
-
-    {
-    id: "tt11655566",
-    type: "movie",
-    name: "Lilo et Stitch",
-    stream: "https://pulse.topstrime.online/movie/552524/usoqx3/master.m3u8"
-  },
-
-  
-    {
-    id: "tt9603208",
-    type: "movie",
-    name: "Mission: Impossible - The Final Reckoning",
-    stream: "https://pulse.topstrime.online/movie/575265/s9vwt3/master.m3u8"
-  },
-
-  
-    {
-    id: "tt10548174",
-    type: "movie",
-    name: "28 ans plus tard",
-    stream: "https://pulse.topstrime.online/movie/1100988/wu59z4/master.m3u8"
-  },
-
-  {
-    id: "tt31179712",
-    type: "movie",
-    name: "Osiris",
-    stream: "https://pulse.topstrime.online/movie/1241470/auauhy/master.m3u8"
-  },
-
-   {
-    id: "tt31868189",
-    type: "movie",
-    name: "Happy Gilmore 2",
-    stream: "https://pulse.topstrime.online/movie/1263256/ufwl6n/master.m3u8"
-  },
-
-  {
-    id: "tt31193064",
-    type: "movie",
-    name: "Mikado",
-    stream: "https://pulse.topstrime.online/movie/1099985/ehkeaw/master.m3u8"
-  },
-
-   {
-    id: "tt35661599",
-    type: "movie",
-    name: "Les condés",
-    stream: "https://pulse.topstrime.online/movie/1407934/d6gp3q/master.m3u8"
-  },
-
-    {
-    id: "tt32299316",
-    type: "movie",
-    name: "Dangerous Animals",
-    stream: "https://pulse.topstrime.online/movie/1285965/ojgtpp/master.m3u8"
-  },
-
-   {
-    id: "tt27052633",
-    type: "movie",
-    name: "Echo Valley",
-    stream: "https://pulse.topstrime.online/movie/1097311/3xjyfc/master.m3u8"
-  },
-
-  {
-    id: "tt26342662",
-    type: "movie",
-    name: "M3GAN 2.0",
-    stream: "https://pulse.topstrime.online/movie/1071585/hp1mdn/master.m3u8"
-  },
-
-  {
-    id: "tt26743210",
-    type: "movie",
-    name: "Dragons",
-    stream: "https://pulse.topstrime.online/movie/1087192/lhg7qi/master.m3u8"
-  },
-
-   {
-    id: "tt33299083",
-    type: "movie",
-    name: "Madea : Mariage exotique",
-    stream: "https://pulse.topstrime.online/movie/1246310/68dnf3/master.m3u8"
-  },
-
-  {
-    id: "tt35669009",
-    type: "movie",
-    name: "Ziam",
-    stream: "https://pulse.topstrime.online/movie/1429744/yxkf23/master.m3u8"
-  },
-
-   {
-    id: "tt31806049",
-    type: "movie",
-    name: "Brick",
-    stream: "https://pulse.topstrime.online/movie/1425045/jieooj/master.m3u8"
-  },
-
-  {
-    id: "tt28637027",
-    type: "movie",
-    name: "Into the Deep",
-    stream: "https://pulse.topstrime.online/movie/1388808/5n8wyl/master.m3u8"
-  },
-
-  
-  {
-    id: "tt37674426",
-    type: "movie",
-    name: "Numéro inconnu : Textos toxiques au lycée",
-    stream: "https://pulse.topstrime.online/movie/1517772/7h7beh/master.m3u8"
-  },
-  
-  {
-    id: "tt33549478",
-    type: "movie",
-    name: "La carte qui mène jusqu'à toi",
-    stream: "https://pulse.topstrime.online/movie/1312946/zvgq7v/master.m3u8"
-  },
-  {
-    id: "tt31434030",
-    type: "movie",
-    name: "Dracula",
-    stream: "https://effervescent-hummingbird-27fbb5.netlify.app/master.m3u8"
-  },
-
- {
-    id: "tt30645201",
-    type: "movie",
-    name: "Honey Don't!",
-    stream: "https://elegant-hotteok-0e9767.netlify.app/master.m3u8"
-  },
-  
-   {
-    id: "tt30973842",
-    type: "movie",
-    name: "Le Jardinier",
-    stream: "https://pulse.topstrime.online/movie/1255788/f5y2q0/master.m3u8"
-  },
-   {
-    id: "tt35934350",
-    type: "movie",
-    name: "F*ckin' Fred: Comme un Léopard",
-    stream: "https://dl33.topstrime.online/hls2/12/01297/,l7aljsbdzw2i_x,lang/fre/l7aljsbdzw2i_fre,.urlset/master.m3u8?t=5OD4YZIRQlTeb1gFhUxF-Zdn596B8HVmYQxe07gL1ZA&s=1757084837&e=43200&f=6485683&i=0.0&sp=0&fr=l7aljsbdzw2i"
-  },
-   {
-    id: "tt27821575",
-    type: "movie",
-    name: "Jamais sans mon psy",
-    stream: "https://pulse.topstrime.online/movie/1130402/zuwa5l/master.m3u8"
-  },
-   {
-    id: "tt32373672",
-    type: "movie",
-    name: "L'Heureuse élue",
-    stream: "https://pulse.topstrime.online/movie/1235502/p59o5l/master.m3u8"
-  },
-   {
-    id: "tt31565654",
-    type: "movie",
-    name: "Drôle de Lune de miel",
-    stream: "https://dl30.topstrime.online/hls2/09/00607/,glvu5fgl97dj_x,lang/ara/glvu5fgl97dj_ara,lang/eng/glvu5fgl97dj_eng,lang/fre/glvu5fgl97dj_fre,.urlset/master.m3u8?t=UrVJpKai7wZjb6ISbJRzz5qS6hbBUZ4ObpXsDNpAwGA&s=1757086120&e=43200&f=3035318&i=0.0&sp=0&fr=glvu5fgl97dj"
-  },
-   {
-    id: "tt30471155",
-    type: "movie",
-    name: "Opération Portugal 2 : La vie de château",
-    stream: "https://pulse.topstrime.online/movie/1155840/p6qhkc/master.m3u8"
-  },
-
-
-   {
-    id: "tt14550172",
-    type: "movie",
-    name: "Le médecin imaginaire",
-    stream: "https://pulse.topstrime.online/movie/764393/xm0b8c/master.m3u8"
-  },
-
-  {
-    id: "tt29031223",
-    type: "movie",
-    name: "Prosper",
-    stream: "https://pulse.topstrime.online/movie/1000881/33945z/master.m3u8"
-  },
-   {
-    id: "tt16431870",
-    type: "movie",
-    name: "Escapade en Famille",
-    stream: "https://pulse.topstrime.online/movie/1029575/master.m3u8"
-  },
-
-  {
-    id: "tt3402138",
-    type: "movie",
-    name: "Y a-t-il un flic pour sauver le monde ?",
-    stream: "https://pulse.topstrime.online/movie/1035259/bf8xpe/master.m3u8"
-  },
-  
-  {
-    id: "tt16311594",
-    type: "movie",
-    name: "F1 (Le Film)",
-    poster: fetchPosterFromIMDb("tt16311594"),
-    stream: "https://pulse.topstrime.online/movie/911430/1o9d0a/master.m3u8"
-  },
-  {
-    id: "tt33613785",
-    type: "movie",
-    name: "God Save the Tuche",
-    poster: fetchPosterFromIMDb("tt33613785"),
-    stream: "https://pulse.topstrime.online/movie/1137759/croued/master.m3u8"
-  },
-  {
-    id: "tt13443470",
+    id: "ttseries_jlc8",
     type: "series",
-    name: "Mercredi",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Série Netflix suivant les aventures de Mercredi Addams à l'Académie Nevermore.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/119051/rdxfvx/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/119051/rblyo2/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/119051/v3vqw4/S1/E3/master.m3u8"
-      },
+    name: "JLC Family Seule",
+    poster: "https://photos.tf1.fr/217/289/program-card-jlc-s08-ep-2-1-46699f-c8e84a-0@3x.jpg",
+    background: "https://photos.tf1.fr/1920/1080/background-ott-jlc-family-seule-67fe2d-a97444-0@3x.jpg",
+    logo: "https://photos.tf1.fr/220/110/logo-programme-jlc-family-seule-1c7d6e-bb5be1-0@3x.png",  
+    description: "À l'approche de ses 33 ans, Jazz se trouve à un carrefour déterminant de sa vie personnelle. Si elle a l'habitude que sa vie soit sans cesse commentée et que son quotidien soit millimétré, actuellement ce qui la préoccupe profondément, c'est de savoir s'il reste une chance pour son couple avec Laurent ?",
+    genres: ["Divertissement"],
+    releaseInfo: "2025",
+    // Episodes organisés par saison
+    episodes: {
+      8: [
+
+           {
+          id: "ttseries_jlc8:8:0",
+          title: "Teaser Saison 8",
+          season: 8,
+          episode: 0,
+          overview: "À l'approche de ses 33 ans, Jazz se trouve à un carrefour déterminant de sa vie personnelle.",
+          released: "2025-09-08T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/950/534/les-premieres-images-de-la-saison-12d9e8-c34c7e-0@3x.jpg",
+          stream: "https://effulgent-pothos-877322.netlify.app/S8E0.m3u8"
+        },
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/119051/y080h1/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/119051/feqros/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/119051/4f0xlr/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/119051/lt5pvl/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/119051/cya5bi/S1/E8/master.m3u8"
-      },
+          id: "ttseries_jlc8:8:1",
+          title: "Episode 1",
+          season: 8,
+          episode: 1,
+          overview: "À l'approche de ses 33 ans, Jazz se trouve à un carrefour déterminant de sa vie.",
+          released: "2025-09-15T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/2107706_jlcseule_vignettereplay_ep01-a16271-830f1c-0@3x.jpg",
+          stream: "https://tubular-bunny-a4e45f.netlify.app/master.m3u8"
+        },
         {
-        id: "s2e1",
-        title: "Épisode 1",
-        season: 2,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/119051/zfm5xe/S2/E1/master.m3u8"
-      },
-      {
-        id: "s2e2",
-        title: "Épisode 2",
-        season: 2,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/119051/musbbc/S2/E2/master.m3u8"
-      },
-      {
-        id: "s2e3",
-        title: "Épisode 3",
-        season: 2,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/119051/fihpzg/S2/E3/master.m3u8"
-      },
-        {
-        id: "s2e4",
-        title: "Épisode 4",
-        season: 2,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/119051/zh7ine/S2/E4/master.m3u8"
-      },
-      {
-        id: "s2e5",
-        title: "Épisode 5",
-        season: 2,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/119051/g0bs80/S2/E5/master.m3u8"
-      },
-      {
-        id: "s2e6",
-        title: "Épisode 6",
-        season: 2,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/119051/d6g8kc/S2/E6/master.m3u8"
-      },
-       {
-        id: "s2e7",
-        title: "Épisode 7",
-        season: 2,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/119051/p7tzot/S2/E7/master.m3u8"
-      },
-      {
-        id: "s2e8",
-        title: "Épisode 8",
-        season: 2,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/119051/m15l7h/S2/E8/master.m3u8"
-      }
-    ]
+          id: "ttseries_jlc8:8:2",
+          title: "Episode 2",
+          season: 8,
+          episode: 2,
+          overview: "À l'approche de ses 33 ans, Jazz se trouve à un carrefour déterminant.",
+          released: "2025-09-16T00:00:00.000Z",
+          thumbnail: "https://photos.tf1.fr/330/186/2107707_jlcseule_vignettereplay_ep02-7afc7b-b4fa26-0@3x.jpg",
+          stream: "https://glistening-chaja-cf55c6.netlify.app/master.m3u8"
+        }
+      ]
+    }
   },
 
+  // === NETFLIX ===
   {
-    id: "tt21638826",
-    type: "series",
-    name: "Dope Thief",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/209876/udne3l/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/209876/dx6117/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/209876/yl5nwe/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/209876/neuw3h/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/209876/r5lov8/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/209876/0kew5v/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/209876/54qrff/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/209876/pcawzz/S1/E8/master.m3u8"
-      }
-    ]
+    id: "tt15398776",
+    type: "movie",
+    name: "Oppenheimer",
+    poster: fetchPosterFromIMDb("tt15398776"),
+    background: "https://4kwallpapers.com/images/wallpapers/oppenheimer-8k-2023-3840x2160-12220.jpg",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Oppenheimer_Movie_Logo_2023.png",
+    description: "L'histoire du physicien J. Robert Oppenheimer et de son rôle dans le développement de la bombe atomique.",
+    genres: ["Biography", "Drama", "History"],
+    releaseInfo: "2023",
+    imdbRating: "8.3",
+    stream: "https://pulse.topstrime.online/movie/872585/82nb0j/master.m3u8",
+    catalog: "netflix"
   },
-
-   {
-    id: "tt32267726",
-    type: "series",
-    name: "The Girlfriend",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://sweet-toffee-7a80b0.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://luminous-jelly-02f9ee.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://superb-beignet-55e5ce.netlify.app/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://effulgent-kitsune-a35575.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://sweet-cocada-86bf72.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://inquisitive-sundae-6a3ac7.netlify.app/master.m3u8"
-      }
-    ]
-  },
-
-{
-    id: "tt28013708",
-    type: "series",
-    name: "Task",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/228305/23vlf7/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/228305/t4ejrv/S1/E2/master.m3u8"
-      }
-    ]
-  },
-
   {
-    id: "tt34683603",
+    id: "tt1190634",
     type: "series",
-    name: "Pour le meilleur et à l'aveugle",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/277544/jrnuf8/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/277544/3jjxhr/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/277544/db74q7/S1/E3/master.m3u8"
-      },
+    name: "The Boys",
+    poster: fetchPosterFromIMDb("tt1190634"),
+    background: fetchPosterFromIMDb("tt1190634"),
+    description: "Une équipe de justiciers qui entreprend d'abattre des super-héros corrompus qui abusent de leurs pouvoirs.",
+    genres: ["Action", "Comedy", "Crime"],
+    releaseInfo: "2019-",
+    imdbRating: "8.7",
+    catalog: "netflix",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/277544/rttduv/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/277544/rwscdc/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/277544/rbcg5j/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/277544/w9q300/S1/E7/master.m3u8"
-      }
-     
-    ]
+          id: "tt1190634:1:1",
+          title: "The Name of the Game",
+          season: 1,
+          episode: 1,
+          overview: "Premier épisode de la saison 1",
+          released: "2019-07-26T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt1190634"),
+          stream: "https://pulse.topstrime.online/tv/76479/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   },
 
+  // === AMAZON PRIME VIDEO ===
   {
-    id: "tt26672404",
-    type: "series",
-    name: "Butterfly",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/227114/561noy/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/227114/1fpfdh/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/227114/itiofr/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/227114/buh6r8/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/227114/eilldl/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/227114/jomjvu/S1/E6/master.m3u8"
-      }
-     
-    ]
+    id: "tt1877830",
+    type: "movie",
+    name: "The Batman",
+    poster: fetchPosterFromIMDb("tt1877830"),
+    background: fetchPosterFromIMDb("tt1877830"),
+    description: "Lorsque le Riddler, un tueur sadique, commence à assassiner des personnalités politiques clés de Gotham, Batman est contraint d'enquêter sur la corruption de la ville.",
+    genres: ["Action", "Crime", "Drama"],
+    releaseInfo: "2022",
+    imdbRating: "7.8",
+    stream: "https://pulse.topstrime.online/movie/414906/82nb0j/master.m3u8",
+    catalog: "prime"
   },
-  
-
   {
-    id: "tt26576161",
+    id: "tt0944947",
     type: "series",
-    name: "The Terminal List: Dark Wolf",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/219760/tzvpgr/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/219760/n2cv3n/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/219760/lqzxfa/S1/E3/master.m3u8"
-      },
+    name: "Game of Thrones",
+    poster: fetchPosterFromIMDb("tt0944947"),
+    background: fetchPosterFromIMDb("tt0944947"),
+    description: "Neuf familles nobles se battent pour le contrôle des terres mythiques de Westeros, tandis qu'un ancien ennemi revient après avoir été endormi pendant des millénaires.",
+    genres: ["Action", "Adventure", "Drama"],
+    releaseInfo: "2011-2019",
+    imdbRating: "9.2",
+    catalog: "prime",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/219760/t2ayaf/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/219760/b5yz9d/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/219760/wciajf/S1/E6/master.m3u8"
-      }
-    ]
+          id: "tt0944947:1:1",
+          title: "Winter Is Coming",
+          season: 1,
+          episode: 1,
+          overview: "Eddard Stark est déchiré entre sa famille et un vieil ami lorsqu'on lui demande de servir à la cour du roi Robert Baratheon.",
+          released: "2011-04-17T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt0944947"),
+          stream: "https://pulse.topstrime.online/tv/1399/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   },
 
+  // === DISNEY+ ===
   {
-    id: "tt31173096",
-    type: "series",
-    name: "El refugio atómico",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Alors que la Troisième Guerre mondiale est sur le point d'éclater, un groupe de milliardaires se réfugie dans un bunker luxueux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://jocular-babka-b8ab98.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/245648/towm6m/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/245648/5a0agc/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/245648/wjfr3b/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/245648/4tp708/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/245648/bfyhx3/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/245648/zwx2uo/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/245648/y22o4a/S1/E8/master.m3u8"
-      }
-    ]
+    id: "tt10872600",
+    type: "movie",
+    name: "Spider-Man: No Way Home",
+    poster: fetchPosterFromIMDb("tt10872600"),
+    background: fetchPosterFromIMDb("tt10872600"),
+    description: "Avec son identité révélée, Peter Parker demande l'aide de Doctor Strange pour restaurer son secret.",
+    genres: ["Action", "Adventure", "Fantasy"],
+    releaseInfo: "2021",
+    imdbRating: "8.2",
+    stream: "https://pulse.topstrime.online/movie/634649/82nb0j/master.m3u8",
+    catalog: "disney"
   },
-
-   {
-    id: "tt10946316",
-    type: "series",
-    name: "The Institute",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/253372/bwh6pf/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/253372/21o0x8/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/253372/honrep/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/253372/yimgq3/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/253372/i9rh6k/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/253372/0xvc5w/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/253372/aa8xk8/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/253372/sr9mqk/S1/E8/master.m3u8"
-      }
-    ]
-  },
-
   {
-    id: "tt23055142",
+    id: "tt9140560",
     type: "series",
-    name: "Black Rabbit",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Deux amis de Philadelphie se font passer pour des agents de la DEA pour braquer des petits dealers. L’arnaque est parfaite, jusqu’à ce qu’ils visent la mauvaise personne et soient pris pour cible par un immense réseau de trafic de drogue.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/249039/pide8p/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/249039/a190gw/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/249039/zgw6lp/S1/E3/master.m3u8"
-      },
+    name: "WandaVision",
+    poster: fetchPosterFromIMDb("tt9140560"),
+    background: fetchPosterFromIMDb("tt9140560"),
+    description: "Série mêlant sitcoms classiques et univers cinématographique Marvel dans laquelle Wanda Maximoff et Vision vivent une vie de banlieue idyllique.",
+    genres: ["Action", "Comedy", "Drama"],
+    releaseInfo: "2021",
+    imdbRating: "7.9",
+    catalog: "disney",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/249039/55j79q/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/249039/fyybhm/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/249039/ntu4e1/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/249039/rau9x3/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/249039/of54da/S1/E8/master.m3u8"
-      }
-    ]
+          id: "tt9140560:1:1",
+          title: "Filmed Before a Live Studio Audience",
+          season: 1,
+          episode: 1,
+          overview: "Wanda et Vision s'installent dans leur nouvelle maison.",
+          released: "2021-01-15T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt9140560"),
+          stream: "https://pulse.topstrime.online/tv/85271/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   },
 
+  // === APPLE TV+ ===
   {
-    id: "tt24163532",
-    type: "series",
-    name: "Smoke",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Un détective troublé et un énigmatique enquêteur sur les incendies criminels vont suivre les traces de deux incendiaires en série.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/215995/pdj2p5/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/215995/1uove5/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/215995/4m7z4i/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/215995/i8fhyt/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/215995/7g37sq/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/215995/6g9bes/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/215995/nw9gxp/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/215995/u5sbl9/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/215995/eehzep/S1/E9/master.m3u8"
-      }
-    ]
+    id: "tt6723592",
+    type: "movie",
+    name: "Tenet",
+    poster: fetchPosterFromIMDb("tt6723592"),
+    background: fetchPosterFromIMDb("tt6723592"),
+    description: "Un agent secret reçoit une mission mystérieuse impliquant l'inversion temporelle pour prévenir la Troisième Guerre mondiale.",
+    genres: ["Action", "Sci-Fi", "Thriller"],
+    releaseInfo: "2020",
+    imdbRating: "7.3",
+    stream: "https://pulse.topstrime.online/movie/577922/82nb0j/master.m3u8",
+    catalog: "appletv"
   },
-
-
-   {
-    id: "tt33364760",
-    type: "series",
-    name: "Eondeokeobeo Haiseukul",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "L'agent vedette du NIS Jung Hae-seong est rétrogradé après l'échec d'une mission. Il se rend infiltré dans un lycée pour retrouver l'or disparu du roi Gojong. Il y rencontre son professeur Oh Soo-ah, qui le considère comme son premier amour perdu, réveillant ainsi un chagrin d'amour.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/248244/omdsfi/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/248244/bqcctu/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/248244/6olr2y/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/248244/omhehh/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/248244/u6x9zn/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/248244/8c1nao/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/248244/fvbotx/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/248244/kg1kcb/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/248244/xfhibm/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/248244/284yo0/S1/E10/master.m3u8"
-      },
-       {
-        id: "s1e11",
-        title: "Épisode 11",
-        season: 1,
-        episode: 11,
-        stream: "https://pulse.topstrime.online/tv/248244/uca0uy/S1/E11/master.m3u8"
-      },
-      {
-        id: "s1e12",
-        title: "Épisode 12",
-        season: 1,
-        episode: 12,
-        stream: "https://pulse.topstrime.online/tv/248244/to8bfn/S1/E12/master.m3u8"
-      }
-    ]
-  },
-
-  
-   {
-    id: "tt23649128",
-    type: "series",
-    name: "The Studio",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Suit un studio de cinéma hollywoodien qui cherche à survivre dans un monde où il est de plus en plus difficile pour l'art et les affaires de vivre ensemble.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/247767/aw1fd2/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/247767/o33azw/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/247767/r6b7f9/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/247767/noyesa/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/247767/1knp45/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/247767/bu8if4/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/247767/4jacco/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/247767/j0nslu/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/247767/7pic0i/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/247767/g4rycd/S1/E10/master.m3u8"
-      }
-    ]
-  },
-
   {
-    id: "tt26676904",
+    id: "tt10234724",
     type: "series",
-    name: "Ballard",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "L'inspecteur Renee Ballard de la police de Los Angeles supervise une nouvelle division chargée des affaires non résolues au sein du service.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/239826/rai9zo/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/239826/du122m/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/239826/vlhyu6/S1/E3/master.m3u8"
-      },
+    name: "Ted Lasso",
+    poster: fetchPosterFromIMDb("tt10234724"),
+    background: fetchPosterFromIMDb("tt10234724"),
+    description: "Un entraîneur de football américain est embauché pour diriger une équipe de football britannique, malgré son absence totale d'expérience.",
+    genres: ["Comedy", "Drama", "Sport"],
+    releaseInfo: "2020-2023",
+    imdbRating: "8.8",
+    catalog: "appletv",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/239826/mbuj46/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/239826/krzee3/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/239826/530rn4/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/239826/4wp2q1/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/239826/txjicp/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/239826/dlrwpk/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/239826/eqqb3m/S1/E10/master.m3u8"
-      }
-    ]
+          id: "tt10234724:1:1",
+          title: "Pilot",
+          season: 1,
+          episode: 1,
+          overview: "Ted Lasso, un entraîneur de football américain, arrive en Angleterre pour diriger un club de football.",
+          released: "2020-08-14T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt10234724"),
+          stream: "https://pulse.topstrime.online/tv/97546/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   },
 
+  // === CANAL+ ===
   {
-    id: "tt33043892",
-    type: "series",
-    name: "Dexter : Résurrection",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Suit un studio de cinéma hollywoodien qui cherche à survivre dans un monde où il est de plus en plus difficile pour l'art et les affaires de vivre ensemble.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/259909/g5oiqa/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/259909/acmedo/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/259909/lzrpev/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/259909/8cqzr9/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/259909/1p3bhl/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/259909/1mvkwl/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/259909/k6dnt4/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/259909/0rdk49/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/259909/clnpfp/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/259909/y7y0em/S1/E10/master.m3u8"
-      }
-    ]
+    id: "tt1160419",
+    type: "movie",
+    name: "Dune",
+    poster: fetchPosterFromIMDb("tt1160419"),
+    background: fetchPosterFromIMDb("tt1160419"),
+    description: "Paul Atreides, jeune homme aussi doué que brillant, est destiné à connaître un destin hors du commun.",
+    genres: ["Action", "Adventure", "Drama"],
+    releaseInfo: "2021",
+    imdbRating: "8.0",
+    stream: "https://pulse.topstrime.online/movie/438631/82nb0j/master.m3u8",
+    catalog: "canal"
   },
-
-    {
-    id: "tt31407116",
-    type: "series",
-    name: "Pulse",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Il suit la vie personnelle et professionnelle des médecins et du personnel d'un centre de traumatologie très actif de Miami.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/247784/74mm21/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/247784/sx5rhv/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/247784/lads51/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/247784/j2icex/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/247784/zw6bcd/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/247784/f8y6rf/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/247784/ncm5pq/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/247784/x2x1v4/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/247784/2524kp/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/247784/tyc6ct/S1/E10/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt32384391",
-    type: "series",
-    name: "Les Thunderman: Incognito",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Phoebe et Max sont envoyés sous couverture pour faire face à une nouvelle menace dans la station balnéaire de Secret Shores et emmènent Chloé avec eux pour développer son talent de super-héros.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/254653/13l3xw/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/254653/gk0nb2/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/254653/5ez0tz/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/254653/iph197/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/254653/629wth/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/254653/wswo57/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/254653/9c2x4p/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/254653/6iho86/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/254653/3yb9ww/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/254653/tcajxz/S1/E10/master.m3u8"
-      },
-       {
-        id: "s1e11",
-        title: "Épisode 11",
-        season: 1,
-        episode: 11,
-        stream: "https://pulse.topstrime.online/tv/254653/o98p5y/S1/E11/master.m3u8"
-      },
-      {
-        id: "s1e12",
-        title: "Épisode 12",
-        season: 1,
-        episode: 12,
-        stream: "https://pulse.topstrime.online/tv/254653/unu3y5/S1/E12/master.m3u8"
-      },
-      {
-        id: "s1e13",
-        title: "Épisode 13",
-        season: 1,
-        episode: 13,
-        stream: "https://pulse.topstrime.online/tv/254653/2jdvg1/S1/E13/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt37504309",
-    type: "series",
-    name: "Unspeakable Sins",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Phoebe et Max sont envoyés sous couverture pour faire face à une nouvelle menace dans la station balnéaire de Secret Shores et emmènent Chloé avec eux pour développer son talent de super-héros.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/290276/n57qzr/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/290276/gz96iq/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/290276/kcs4sw/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/290276/zjqjyr/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/290276/nftn2a/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/290276/jtp6qd/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/290276/dzvhep/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/290276/zwxcsl/S1/E8/master.m3u8"
-      },
-      {
-        id: "s1e9",
-        title: "Épisode 9",
-        season: 1,
-        episode: 9,
-        stream: "https://pulse.topstrime.online/tv/290276/3gvqgx/S1/E9/master.m3u8"
-      },
-      {
-        id: "s1e10",
-        title: "Épisode 10",
-        season: 1,
-        episode: 10,
-        stream: "https://pulse.topstrime.online/tv/290276/i6auqi/S1/E10/master.m3u8"
-      },
-       {
-        id: "s1e11",
-        title: "Épisode 11",
-        season: 1,
-        episode: 11,
-        stream: "https://pulse.topstrime.online/tv/290276/sxzuez/S1/E11/master.m3u8"
-      },
-      {
-        id: "s1e12",
-        title: "Épisode 12",
-        season: 1,
-        episode: 12,
-        stream: "https://pulse.topstrime.online/tv/290276/ywqc1q/S1/E12/master.m3u8"
-      },
-      {
-        id: "s1e13",
-        title: "Épisode 13",
-        season: 1,
-        episode: 13,
-        stream: "https://pulse.topstrime.online/tv/290276/9dij6b/S1/E13/master.m3u8"
-      },
-      {
-        id: "s1e14",
-        title: "Épisode 14",
-        season: 1,
-        episode: 14,
-        stream: "https://pulse.topstrime.online/tv/290276/pq57tb/S1/E14/master.m3u8"
-      },
-      {
-        id: "s1e15",
-        title: "Épisode 15",
-        season: 1,
-        episode: 15,
-        stream: "https://pulse.topstrime.online/tv/290276/0tgrda/S1/E15/master.m3u8"
-      },
-       {
-        id: "s1e16",
-        title: "Épisode 16",
-        season: 1,
-        episode: 16,
-        stream: "https://pulse.topstrime.online/tv/290276/lox819/S1/E16/master.m3u8"
-      },
-      {
-        id: "s1e17",
-        title: "Épisode 17",
-        season: 1,
-        episode: 17,
-        stream: "https://pulse.topstrime.online/tv/290276/xyou72/S1/E17/master.m3u8"
-      },
-      {
-        id: "s1e18",
-        title: "Épisode 18",
-        season: 1,
-        episode: 18,
-        stream: "https://pulse.topstrime.online/tv/290276/8c3fnf/S1/E18/master.m3u8"
-      }
-    ]
-  },
-
-     {
-    id: "tt31806048",
-    type: "series",
-    name: "Hostage",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/248937/cqleut/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/248937/v94n00/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/248937/70wgya/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/248937/he3w7h/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/248937/ccsj30/S1/E5/master.m3u8"
-      }
-    ]
-  },
-
   {
-    id: "tt27368147",
+    id: "tt2861424",
     type: "series",
-    name: "Tempest",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/223326/lcnrn2/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/223326/kncvy1/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/223326/i0u2zz/S1/E3/master.m3u8"
-      },
+    name: "Rick and Morty",
+    poster: fetchPosterFromIMDb("tt2861424"),
+    background: fetchPosterFromIMDb("tt2861424"),
+    description: "Un génie alcoolique et son petit-fils pas très futé embarquent dans des aventures inter-dimensionnelles.",
+    genres: ["Animation", "Adventure", "Comedy"],
+    releaseInfo: "2013-",
+    imdbRating: "9.1",
+    catalog: "canal",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/223326/ieejph/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/223326/8doobj/S1/E5/master.m3u8"
-      }
-    ]
+          id: "tt2861424:1:1",
+          title: "Pilot",
+          season: 1,
+          episode: 1,
+          overview: "Rick emmène Morty dans une aventure inter-dimensionnelle.",
+          released: "2013-12-02T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt2861424"),
+          stream: "https://pulse.topstrime.online/tv/60625/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   },
 
-    {
-    id: "tt36614693",
-    type: "series",
-    name: "WWE: Unreal",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/289485/dubi0d/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/289485/ktp13k/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/289485/j48v23/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/289485/9da1js/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/289485/squnfw/S1/E5/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt31019484",
-    type: "series",
-    name: "Tu me manques",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Le monde de l'inspecteur Kat Donovan s'écroule lorsqu'elle retrouve son ancien fiancé sur une application de rencontres. Cela conduit Kat à rouvrir le mystère non résolu du meurtre de son père.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/244243/gn4nlr/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/244243/frya3f/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/244243/dmkuly/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/244243/yfomp3/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/244243/op68yg/S1/E5/master.m3u8"
-      }
-    ]
-  },
-
-     {
-    id: "tt32146392",
-    type: "series",
-    name: "Deux Tombes",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Le mari du Premier ministre britannique est kidnappé, le président français fait l'objet d'un chantage. Ils doivent gérer leur rivalité tout en découvrant un complot qui les menace tous les deux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://neon-monstera-87a431.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://willowy-cactus-8c7dea.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://magenta-rabanadas-6fa517.netlify.app/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt30428143",
-    type: "series",
-    name: "Apple Cider Vinegar",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "La vie de Belle Gibson, gourou du bien-être, très suivie sur les réseaux sociaux, où elle prétendait souffrir d'un cancer tout en contrôlant sa maladie grâce à des thérapies auto-administrées. Elle a avoué que tout cela était faux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/241501/e0zgqi/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://glistening-sherbet-f1134c.netlify.app/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/241501/aujni2/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/241501/990biw/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/241501/5robox/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/241501/7kvh77/S1/E6/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt30750108",
-    type: "series",
-    name: "Le Dôme de verre",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une criminologue et son ancien partenaire chef de la police enquêtent sur la disparition d'une jeune fille dans la petite ville suédoise où elle a été retenue captive.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/275388/fse1tv/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/275388/bs5i1u/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/275388/9ynrob/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/275388/7mm24u/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/275388/3tlz5f/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/275388/9yujz9/S1/E6/master.m3u8"
-      }
-    ]
-  },
-
+  // === HBO MAX ===
   {
-    id: "tt33246591",
-    type: "series",
-    name: "The Assassin",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une assassin à la retraite retrouve son fils dont elle s'est séparée, mais son dangereux passé les rattrape, les obligeant à fuir ensemble et à découvrir une sombre conspiration qui menace leur relation.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/262352/6va1zl/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/262352/d2buie/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/262352/xd5591/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/262352/6zcsj9/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/262352/nxzvsl/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/262352/n6xo0b/S1/E6/master.m3u8"
-      }
-    ]
+    id: "tt1375666",
+    type: "movie",
+    name: "Inception",
+    poster: fetchPosterFromIMDb("tt1375666"),
+    background: fetchPosterFromIMDb("tt1375666"),
+    description: "Un voleur qui s'introduit dans les rêves pour voler des secrets se voit confier la mission inverse : implanter une idée.",
+    genres: ["Action", "Sci-Fi", "Thriller"],
+    releaseInfo: "2010",
+    imdbRating: "8.8",
+    stream: "https://pulse.topstrime.online/movie/27205/82nb0j/master.m3u8",
+    catalog: "hbo"
   },
-
-   {
-    id: "tt13623632",
-    type: "series",
-    name: "Alien: Earth",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "La vie de Belle Gibson, gourou du bien-être, très suivie sur les réseaux sociaux, où elle prétendait souffrir d'un cancer tout en contrôlant sa maladie grâce à des thérapies auto-administrées. Elle a avoué que tout cela était faux.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/157239/vs5zrp/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/157239/1itbb5/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/157239/jbjrug/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/157239/raijmc/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/157239/8o19wi/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/157239/nzpdv9/S1/E6/master.m3u8"
-      }
-    ]
-  },
-
   {
-    id: "tt18332852",
+    id: "tt0903747",
     type: "series",
-    name: "Outlander: Blood of My Blood",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Préquel de la série Outlander se concentre sur la vie et les fréquentations des parents de Jamie Fraser : Brian Fraser et Ellen Mackenzie.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/207484/jsvq66/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/207484/6q5hot/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/207484/a3ji61/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/207484/f42ia9/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/207484/spfqdf/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/207484/va5dxy/S1/E6/master.m3u8"
-      }
-    ]
-  },
-
-  {
-    id: "tt36125791",
-    type: "series",
-    name: "Soleil noir",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une femme fuyant son passé est accusée de meurtre après le décès de son employeur dans une ferme de fleurs - pour apprendre ensuite qu'il était son père biologique.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/272466/4ys8mc/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/272466/akri3b/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/272466/ohs6y0/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/272466/r373tu/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/272466/nkku1p/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/272466/htv0wl/S1/E6/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt28106730",
-    type: "series",
-    name: "The Trauma Code: Appel à l'Héroïsme ?",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une équipe d'élite de spécialistes en traumatologie dans un hôpital universitaire dirigée par le génie médecin Baek Kang-hyeok.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/217553/oujh42/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/217553/fk4gtu/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/217553/xkh9g2/S1/E3/master.m3u8"
-      },
+    name: "Breaking Bad",
+    poster: fetchPosterFromIMDb("tt0903747"),
+    background: fetchPosterFromIMDb("tt0903747"),
+    description: "Un professeur de chimie atteint d'un cancer se lance dans la fabrication de méthamphétamine pour assurer l'avenir financier de sa famille.",
+    genres: ["Crime", "Drama", "Thriller"],
+    releaseInfo: "2008-2013",
+    imdbRating: "9.5",
+    catalog: "hbo",
+    episodes: {
+      1: [
         {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/217553/rfym4c/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/217553/7b62w6/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/217553/5sqf9c/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/217553/igagnq/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/217553/93of7h/S1/E8/master.m3u8"
-      }
-    ]
-  },
-
-  {
-    id: "tt36517681",
-    type: "series",
-    name: "Le Catalogue d'Amina",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une équipe d'élite de spécialistes en traumatologie dans un hôpital universitaire dirigée par le génie médecin Baek Kang-hyeok.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/252125/l2djys/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/252125/k4oe8q/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/252125/kczu27/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/252125/yd6kf1/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/252125/3qpdl0/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/252125/ixfa00/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/252125/q5w5a6/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/252125/umc2fg/S1/E8/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt36955264",
-    type: "series",
-    name: "Young Millionaires",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Quatre amis de 17 ans gagnent à la loterie à Marseille, mais sont trop jeunes pour le réclamer. Leur jackpot de 17 millions entraîne des complications de plus en plus nombreuses : être riche pour des adolescents n'est pas aussi simple qu'il y paraît.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/272467/fnl4gu/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/272467/16odew/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/272467/27496n/S1/E3/master.m3u8"
-      },
-        {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/272467/vd81m5/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/272467/1fqfe6/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/272467/5677ow/S1/E6/master.m3u8"
-      },
-       {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/272467/gcbmbg/S1/E7/master.m3u8"
-      },
-      {
-        id: "s1e8",
-        title: "Épisode 8",
-        season: 1,
-        episode: 8,
-        stream: "https://pulse.topstrime.online/tv/272467/u4fcbu/S1/E8/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt36056620",
-    type: "series",
-    name: "S Line",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une jeune femme dotée de la capacité de voir de mystérieuses connexions rouges entre les amoureux découvre que son don secret n'est plus unique lorsque des lunettes spéciales conférant des pouvoirs similaires apparaissent sur le marché noir.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/232402/lvoq7e/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/232402/5s1til/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/232402/w2pzmc/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/232402/8v58mm/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/232402/b9ttm1/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://luminous-lokum-4d3c4a.netlify.app/master.m3u8"
-      }
-    ]
-  },
-
-   {
-    id: "tt31828121",
-    type: "series",
-    name: "Halva Malmö består av killar som dumpat mig",
-    poster: fetchPosterFromIMDb("tt13443470"),
-    description: "Une jeune femme dotée de la capacité de voir de mystérieuses connexions rouges entre les amoureux découvre que son don secret n'est plus unique lorsque des lunettes spéciales conférant des pouvoirs similaires apparaissent sur le marché noir.",
-    genres: ["Comedy", "Fantasy"],
-    videos: [
-      {
-        id: "s1e1",
-        title: "Épisode 1",
-        season: 1,
-        episode: 1,
-        stream: "https://pulse.topstrime.online/tv/283390/4coqif/S1/E1/master.m3u8"
-      },
-      {
-        id: "s1e2",
-        title: "Épisode 2",
-        season: 1,
-        episode: 2,
-        stream: "https://pulse.topstrime.online/tv/283390/wk8eav/S1/E2/master.m3u8"
-      },
-      {
-        id: "s1e3",
-        title: "Épisode 3",
-        season: 1,
-        episode: 3,
-        stream: "https://pulse.topstrime.online/tv/283390/2v5b09/S1/E3/master.m3u8"
-      },
-      {
-        id: "s1e4",
-        title: "Épisode 4",
-        season: 1,
-        episode: 4,
-        stream: "https://pulse.topstrime.online/tv/283390/yrj79h/S1/E4/master.m3u8"
-      },
-      {
-        id: "s1e5",
-        title: "Épisode 5",
-        season: 1,
-        episode: 5,
-        stream: "https://pulse.topstrime.online/tv/283390/7it7qy/S1/E5/master.m3u8"
-      },
-      {
-        id: "s1e6",
-        title: "Épisode 6",
-        season: 1,
-        episode: 6,
-        stream: "https://pulse.topstrime.online/tv/283390/7gvoz1/S1/E6/master.m3u8"
-      },
-      {
-        id: "s1e7",
-        title: "Épisode 7",
-        season: 1,
-        episode: 7,
-        stream: "https://pulse.topstrime.online/tv/283390/1kfkee/S1/E7/master.m3u8"
-      }
-    ]
+          id: "tt0903747:1:1",
+          title: "Pilot",
+          season: 1,
+          episode: 1,
+          overview: "Walter White, professeur de chimie, apprend qu'il a un cancer du poumon.",
+          released: "2008-01-20T00:00:00.000Z",
+          thumbnail: fetchPosterFromIMDb("tt0903747"),
+          stream: "https://pulse.topstrime.online/tv/1396/1/1/82nb0j/master.m3u8"
+        }
+      ]
+    }
   }
-  
+
 ];
 
 // === Manifest ===
@@ -2726,17 +927,70 @@ const manifest = {
   id: "community.directhls",
   version: "1.0.0",
   catalogs: [
-    { 
-      type: "movie", 
-      id: "directhls_movies", 
-      name: "Direct HLS Movies",
-      extra: [{ name: "search", isRequired: false }]
+    {
+      type: "series",
+      id: "directhls_series",
+      name: "Télé-Réalité"
     },
-    { 
-      type: "series", 
-      id: "directhls_series", 
-      name: "Direct HLS Series",
-      extra: [{ name: "search", isRequired: false }]
+    {
+      type: "movie",
+      id: "netflix_movies",
+      name: "Netflix Films"
+    },
+    {
+      type: "series",
+      id: "netflix_series",
+      name: "Netflix Séries"
+    },
+    {
+      type: "movie",
+      id: "prime_movies",
+      name: "Amazon Prime Films"
+    },
+    {
+      type: "series",
+      id: "prime_series",
+      name: "Amazon Prime Séries"
+    },
+    {
+      type: "movie",
+      id: "disney_movies",
+      name: "Disney+ Films"
+    },
+    {
+      type: "series",
+      id: "disney_series",
+      name: "Disney+ Séries"
+    },
+    {
+      type: "movie",
+      id: "appletv_movies",
+      name: "Apple TV+ Films"
+    },
+    {
+      type: "series",
+      id: "appletv_series",
+      name: "Apple TV+ Séries"
+    },
+    {
+      type: "movie",
+      id: "canal_movies",
+      name: "Canal+ Films"
+    },
+    {
+      type: "series",
+      id: "canal_series",
+      name: "Canal+ Séries"
+    },
+    {
+      type: "movie",
+      id: "hbo_movies",
+      name: "HBO Max Films"
+    },
+    {
+      type: "series",
+      id: "hbo_series",
+      name: "HBO Max Séries"
     }
   ],
   resources: [
@@ -2746,7 +1000,7 @@ const manifest = {
   ],
   types: ["movie", "series"],
   name: "Direct HLS Addon",
-  description: "Streaming direct via HLS",
+  description: "Streaming direct via HLS pour films et séries",
   idPrefixes: ["tt"]
 };
 
@@ -2762,135 +1016,213 @@ export default function handler(req, res) {
     return res.end();
   }
 
-  const url = new URL(req.url, "http://localhost");
+  const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
   const parts = pathname.split('/').filter(Boolean);
 
-  console.log('Request:', pathname, 'Parts:', parts);
+  console.log('=== REQUEST DEBUG ===');
+  console.log('Full URL:', req.url);
+  console.log('Pathname:', pathname);
+  console.log('Parts:', parts);
+  console.log('Method:', req.method);
 
-  // Manifest
-  if (pathname === '/manifest.json') {
+  // Route: /manifest.json
+  if (pathname === '/manifest.json' || (parts.length === 1 && parts[0] === 'manifest.json')) {
+    console.log('Serving manifest');
     return sendJSON(res, manifest);
   }
 
-  // Catalog
-  if (parts[0] === 'catalog') {
-    const catalogType = parts[1]; // movie or series
-    const metas = catalogData
-      .filter(item => item.type === catalogType)
-      .map(item => ({
-        id: item.id,
-        type: item.type,
-        name: item.name,
-        poster: item.poster,
+  // Route: /catalog/:type/:catalogId.json
+  if (parts[0] === 'catalog' && parts.length >= 3) {
+    const catalogType = parts[1];
+    const catalogId = stripJson(parts[2]);
+
+    console.log('Catalog request - Type:', catalogType, 'ID:', catalogId);
+
+    let metas = [];
+    let items = [];
+
+    if (catalogId === 'directhls_series') {
+      items = catalogData.filter(item => item.type === 'series' && !item.catalog);
+    } else if (catalogId.includes('_movies')) {
+      const platform = catalogId.replace('_movies', '');
+      items = catalogData.filter(item => item.type === 'movie' && item.catalog === platform);
+    } else if (catalogId.includes('_series')) {
+      const platform = catalogId.replace('_series', '');
+      items = catalogData.filter(item => item.type === 'series' && item.catalog === platform);
+    }
+
+    for (const item of items) {
+      let metadata = item;
+
+      if (item.id.startsWith('tt')) {
+        metadata = await getEnrichedMetadata(item.id, item);
+      }
+
+      metas.push({
+        id: metadata.id,
+        type: metadata.type,
+        name: metadata.name,
+        poster: metadata.poster,
         posterShape: "regular",
-        description: item.description || `${item.name} - Streaming direct`,
-        genres: item.genres || ["Drama"]
-      }));
-    
+        description: metadata.description,
+        genres: metadata.genres,
+        background: metadata.background,
+        logo: metadata.logo,
+        releaseInfo: metadata.releaseInfo,
+        imdbRating: metadata.imdbRating
+      });
+    }
+
+    console.log('Sending catalog with', metas.length, 'items');
     return sendJSON(res, { metas });
   }
 
-  // Meta
-  if (parts[0] === 'meta') {
-    const type = parts[1]; // movie or series
+  // Route: /meta/:type/:id.json
+  if (parts[0] === 'meta' && parts.length >= 3) {
+    const type = parts[1];
     const id = decodeURIComponent(stripJson(parts[2]));
-    
-    console.log('Meta request for:', type, id);
+
+    console.log('Meta request - Type:', type, 'ID:', id);
 
     const item = catalogData.find(x => x.id === id && x.type === type);
-    
+
     if (!item) {
-      return sendJSON(res, { error: "Not found" }, 404);
+      console.log('Item not found for meta request');
+      return sendJSON(res, { meta: null }, 404);
     }
 
-    if (item.type === 'movie') {
+    let enrichedItem = item;
+
+    if (item.id.startsWith('tt')) {
+      enrichedItem = await getEnrichedMetadata(item.id, item);
+    }
+
+    if (enrichedItem.type === 'series') {
+      const videos = [];
+
+      Object.keys(enrichedItem.episodes || {}).forEach(seasonNum => {
+        const seasonEpisodes = enrichedItem.episodes[seasonNum];
+        seasonEpisodes.forEach(episode => {
+          videos.push({
+            id: episode.id,
+            title: episode.title,
+            season: episode.season,
+            episode: episode.episode,
+            overview: episode.overview,
+            released: episode.released,
+            thumbnail: episode.thumbnail
+          });
+        });
+      });
+
       const meta = {
-        id: item.id,
-        type: item.type,
-        name: item.name,
-        poster: item.poster,
-        description: item.description,
-        genres: item.genres,
-        runtime: "120 min"
+        id: enrichedItem.id,
+        type: enrichedItem.type,
+        name: enrichedItem.name,
+        poster: enrichedItem.poster,
+        background: enrichedItem.background,
+        logo: enrichedItem.logo,
+        description: enrichedItem.description,
+        genres: enrichedItem.genres,
+        releaseInfo: enrichedItem.releaseInfo,
+        imdbRating: enrichedItem.imdbRating,
+        runtime: enrichedItem.runtime,
+        cast: enrichedItem.cast,
+        director: enrichedItem.director,
+        trailer: enrichedItem.trailer,
+        posterShape: "regular",
+        videos: videos
       };
+
+      console.log('Sending series meta with', videos.length, 'episodes');
       return sendJSON(res, { meta });
-    } else if (item.type === 'series') {
+    } else if (enrichedItem.type === 'movie') {
       const meta = {
-        id: item.id,
-        type: item.type,
-        name: item.name,
-        poster: item.poster,
-        description: item.description,
-        genres: item.genres,
-        videos: item.videos.map(video => ({
-          id: `${item.id}:${video.season}:${video.episode}`,
-          title: video.title,
-          season: video.season,
-          episode: video.episode,
-          released: new Date().toISOString().split('T')[0]
-        }))
+        id: enrichedItem.id,
+        type: enrichedItem.type,
+        name: enrichedItem.name,
+        poster: enrichedItem.poster,
+        background: enrichedItem.background,
+        logo: enrichedItem.logo,
+        description: enrichedItem.description,
+        genres: enrichedItem.genres,
+        releaseInfo: enrichedItem.releaseInfo,
+        imdbRating: enrichedItem.imdbRating,
+        runtime: enrichedItem.runtime,
+        cast: enrichedItem.cast,
+        director: enrichedItem.director,
+        trailer: enrichedItem.trailer,
+        tagline: enrichedItem.tagline,
+        posterShape: "regular"
       };
+
+      console.log('Sending movie meta');
       return sendJSON(res, { meta });
     }
   }
 
-  // Stream
-  if (parts[0] === 'stream') {
-    const type = parts[1]; // movie or series
+  // Route: /stream/:type/:id.json
+  if (parts[0] === 'stream' && parts.length >= 3) {
+    const type = parts[1];
     const id = decodeURIComponent(stripJson(parts[2]));
-    
-    console.log('Stream request for:', type, id);
 
-    let streamUrl = null;
-    let title = "";
+    console.log('Stream request - Type:', type, 'ID:', id);
 
-    // Handle movies
+    let streams = [];
+
     if (type === 'movie') {
       const movie = catalogData.find(x => x.id === id && x.type === 'movie');
-      if (movie) {
-        streamUrl = movie.stream;
-        title = movie.name;
+
+      if (movie && movie.stream) {
+        console.log('Found movie stream:', movie.stream);
+        streams.push({
+          name: "Direct HLS",
+          title: movie.name,
+          url: movie.stream,
+          behaviorHints: {
+            notWebReady: false
+          }
+        });
+      } else {
+        console.log('Movie not found or no stream URL');
       }
-    }
-    
-    // Handle series episodes (format: tt13443470:1:1)
-    if (type === 'series' && id.includes(':')) {
-      const [seriesId, season, episode] = id.split(':');
-      const series = catalogData.find(x => x.id === seriesId && x.type === 'series');
-      
-      if (series && series.videos) {
-        const video = series.videos.find(v => 
-          v.season === parseInt(season) && v.episode === parseInt(episode)
-        );
-        
-        if (video) {
-          streamUrl = video.stream;
-          title = `${series.name} - S${season}E${episode}`;
+    } else if (type === 'series' && id.includes(':')) {
+      const idParts = id.split(':');
+      if (idParts.length >= 3) {
+        const [seriesId, seasonNum, episodeNum] = idParts;
+        const series = catalogData.find(x => x.id === seriesId && x.type === 'series');
+
+        console.log('Looking for series:', seriesId, 'season:', seasonNum, 'episode:', episodeNum);
+
+        if (series && series.episodes && series.episodes[seasonNum]) {
+          const episode = series.episodes[seasonNum].find(e => e.episode === parseInt(episodeNum));
+
+          if (episode && episode.stream) {
+            console.log('Found episode stream:', episode.stream);
+            streams.push({
+              name: "Direct HLS",
+              title: `${series.name} - S${seasonNum}E${episodeNum} - ${episode.title}`,
+              url: episode.stream,
+              behaviorHints: {
+                notWebReady: false,
+                bingeGroup: `directhls-${seriesId}-s${seasonNum}`
+              }
+            });
+          } else {
+            console.log('Episode not found or no stream URL');
+          }
+        } else {
+          console.log('Series not found or no episodes for season');
         }
       }
     }
 
-    if (streamUrl) {
-      const streamResponse = {
-        streams: [
-          {
-            name: "Direct HLS",
-            title: title,
-            url: streamUrl,
-            behaviorHints: {
-              notWebReady: false,
-              bingeGroup: `directhls-${type}`
-            }
-          }
-        ]
-      };
-      return sendJSON(res, streamResponse);
-    } else {
-      console.log('No stream found for:', type, id);
-      return sendJSON(res, { streams: [] });
-    }
+    console.log('Sending', streams.length, 'streams');
+    return sendJSON(res, { streams });
   }
 
-  return sendJSON(res, { error: "Route not found" }, 404);
+  // Route non trouvée
+  console.log('Route not found:', pathname);
+  return sendJSON(res, { error: "Route not found", path: pathname }, 404);
 }
