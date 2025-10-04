@@ -949,7 +949,7 @@ const catalogData = [
         title: "Épisode 1",
         season: 1,
         episode: 1,
-        stream: "https://sparkling-puppy-f5f5f6.netlify.app/master.m3u8"
+        stream: "https://jocular-babka-b8ab98.netlify.app/master.m3u8"
       },
       {
         id: "s1e2",
